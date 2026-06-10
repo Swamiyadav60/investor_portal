@@ -1,0 +1,194 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Topbar } from '@/components/layout/Topbar'
+import { ToggleGroup } from '@/components/ui/ToggleGroup'
+import { DEMO_KIOSKS, DEMO_COLLEGES } from '@/data/demo'
+import { fmt } from '@/lib/format'
+import { initiatePayment } from '@/lib/razorpay'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/components/ui/Toast'
+
+export function KiosksPage() {
+  const [slotFilter, setSlotFilter] = useState('all')
+  const navigate = useNavigate()
+  const { investor } = useAuth()
+  const { toast } = useToast()
+
+  const activeKiosks = DEMO_KIOSKS.filter((k) => k.status === 'active')
+  const pendingKiosks = DEMO_KIOSKS.filter((k) => k.status === 'pending')
+  const filtered = slotFilter === 'all' ? DEMO_COLLEGES : DEMO_COLLEGES.filter((s) => s.type === slotFilter)
+
+  const handleInvest = async (college: typeof DEMO_COLLEGES[0]) => {
+    try {
+      await initiatePayment({
+        amount: college.investment_amount,
+        description: `Investment in ${college.name}`,
+        name: investor?.full_name || '',
+        email: investor?.email || '',
+        phone: investor?.phone || undefined,
+        onSuccess: () => toast(`Investment in ${college.name} confirmed!`, 'success'),
+      })
+    } catch {
+      toast('Payment gateway not configured. Set VITE_RAZORPAY_KEY_ID in .env', 'error')
+    }
+  }
+
+  return (
+    <>
+      <Topbar title="My Kiosks" />
+      <div className="page-view content">
+        <div className="section-header">
+          <div>
+            <div className="section-heading">My kiosks</div>
+            <div className="section-heading-sub">{activeKiosks.length} active slots · Earning since Feb 2025</div>
+          </div>
+        </div>
+
+        <div className="printer-cards">
+          {activeKiosks.map((k) => (
+            <div key={k.id} className="pc">
+              <div className="pc-accent" style={{ background: 'var(--green)' }} />
+              <div className="pc-top">
+                <div className="pc-icon">
+                  <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <span className="pc-status active">Active</span>
+              </div>
+              <div className="pc-name">{k.name}</div>
+              <div className="pc-loc">
+                <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {k.location}
+              </div>
+              <div className="pc-stats">
+                <div className="pc-stat">
+                  <div className="pc-stat-val" style={{ color: 'var(--green)' }}>{fmt(k.monthly_earnings)}</div>
+                  <div className="pc-stat-lbl">Your share / mo</div>
+                </div>
+                <div className="pc-stat">
+                  <div className="pc-stat-val">{k.jobs_this_month.toLocaleString('en-IN')}</div>
+                  <div className="pc-stat-lbl">Jobs this month</div>
+                </div>
+                <div className="pc-stat">
+                  <div className="pc-stat-val">{fmt(k.total_earned)}</div>
+                  <div className="pc-stat-lbl">Total earned</div>
+                </div>
+                <div className="pc-stat">
+                  <div className="pc-stat-val">{k.occupancy_rate}%</div>
+                  <div className="pc-stat-lbl">Occupancy</div>
+                </div>
+              </div>
+              <div className="pc-footer">
+                <span className="pc-footer-note">Since {k.installed_at ? new Date(k.installed_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—'}</span>
+                <button className="pc-btn" onClick={() => navigate('/dashboard')}>View stats →</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="section-divider">
+          <div className="section-divider-line" />
+          <div className="section-divider-label">Available to invest</div>
+          <div className="section-divider-line" />
+        </div>
+
+        <div className="section-header" style={{ marginBottom: '.75rem' }}>
+          <div>
+            <div className="section-heading" style={{ fontSize: 14 }}>Pending installation</div>
+            <div className="section-heading-sub">Purchased slots awaiting hardware setup</div>
+          </div>
+        </div>
+
+        <div className="printer-cards">
+          {pendingKiosks.map((k) => (
+            <div key={k.id} className="pc pending-card">
+              <div className="pc-accent" />
+              <div className="pc-top">
+                <div className="pc-icon" style={{ background: 'var(--amber-l)' }}>
+                  <svg viewBox="0 0 24 24" style={{ stroke: 'var(--amber)' }}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <span className="pc-status pending">Installing</span>
+              </div>
+              <div className="pc-name">{k.name}</div>
+              <div className="pc-loc">
+                <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {k.location}
+              </div>
+              <div className="install-steps">
+                {k.install_steps.map((s, i) => (
+                  <div key={i} className={`install-step ${s.done ? 'done' : s.active ? 'active' : 'waiting'}`}>
+                    {s.done ? (
+                      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                    ) : s.active ? (
+                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+                    )}
+                    {s.label}
+                  </div>
+                ))}
+              </div>
+              <div className="pc-footer">
+                <span className="pc-footer-note" style={{ color: 'var(--amber)' }}>{k.install_eta}</span>
+                <span style={{ fontSize: 11, color: 'var(--gray)' }}>Step 3 of 4</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="section-header" style={{ marginTop: '1.5rem', marginBottom: '.75rem' }}>
+          <div>
+            <div className="section-heading" style={{ fontSize: 14 }}>Open slots near you</div>
+            <div className="section-heading-sub">High-traffic locations with available investment slots</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: 'var(--gray)' }}>Filter:</span>
+            <ToggleGroup
+              options={[
+                { key: 'all', label: 'All' },
+                { key: 'college', label: 'College' },
+                { key: 'transit', label: 'Transit' },
+                { key: 'commercial', label: 'Commercial' },
+              ]}
+              value={slotFilter}
+              onChange={setSlotFilter}
+            />
+          </div>
+        </div>
+
+        <div className="available-grid">
+          {filtered.map((s) => {
+            const pct = Math.round(s.slots_taken / s.slots_total * 100)
+            const left = s.slots_total - s.slots_taken
+            return (
+              <div key={s.id} className="av-card">
+                <div className="av-top">
+                  <div className="av-icon">
+                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  </div>
+                  <span className={`av-badge ${s.tag}`}>{s.tag_label}</span>
+                </div>
+                <div className="av-name">{s.name}</div>
+                <div className="av-meta">{s.location}</div>
+                <div className="av-slots-row">
+                  <div className="av-slots-bar-wrap"><div className="av-slots-bar" style={{ width: `${pct}%` }} /></div>
+                  <span className="av-slots-txt">{left} slot{left !== 1 ? 's' : ''} left</span>
+                </div>
+                <div className="av-earn">
+                  <div>
+                    <div className="av-earn-val">{fmt(s.avg_monthly_earnings)}</div>
+                    <div className="av-earn-lbl">Avg monthly earnings</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{fmt(s.investment_amount)}</div>
+                    <div className="av-earn-lbl">One-time investment</div>
+                  </div>
+                </div>
+                <button className="av-invest-btn" onClick={() => handleInvest(s)}>Invest in this slot →</button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )
+}
