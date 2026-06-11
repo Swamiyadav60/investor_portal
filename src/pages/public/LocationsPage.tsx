@@ -5,7 +5,6 @@ import { ToggleGroup } from '@/components/ui/ToggleGroup'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
 import { supabase } from '@/lib/supabase'
-import { fmt } from '@/lib/format'
 import { useAuth } from '@/contexts/AuthContext'
 import type { College } from '@/types/database'
 
@@ -113,16 +112,6 @@ export function LocationsPage() {
                     <span className="av-slots-txt">{left} slot{left !== 1 ? 's' : ''} left</span>
                   </div>
 
-                  <div className="av-earn" style={{ margin: '1.25rem 0' }}>
-                    <div>
-                      <div className="av-earn-val">{fmt(s.avg_monthly_earnings)}</div>
-                      <div className="av-earn-lbl">Avg earnings /mo</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{fmt(s.investment_amount)}</div>
-                      <div className="av-earn-lbl">Investment</div>
-                    </div>
-                  </div>
                   <button 
                     onClick={() => handleReserveClick(s)} 
                     className="av-invest-btn" 

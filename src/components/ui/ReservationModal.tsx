@@ -156,10 +156,6 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
             <span>Location Investment</span>
             <span>{fmt(college.investment_amount)}</span>
           </div>
-          <div className="summary-row">
-            <span>Estimated Earnings</span>
-            <span style={{ color: 'var(--green)' }}>{fmt(college.avg_monthly_earnings)} /mo</span>
-          </div>
         </div>
 
         <button

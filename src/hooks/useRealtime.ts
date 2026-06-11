@@ -16,7 +16,6 @@ export function useRealtimeSubscription(tables: string[] = ['revenues', 'expense
           queryClient.invalidateQueries({ queryKey: ['dashboard'] })
           queryClient.invalidateQueries({ queryKey: ['kiosks'] })
           queryClient.invalidateQueries({ queryKey: ['payments'] })
-          queryClient.invalidateQueries({ queryKey: ['earnings'] })
           queryClient.invalidateQueries({ queryKey: ['live-jobs'] })
         })
         .subscribe()

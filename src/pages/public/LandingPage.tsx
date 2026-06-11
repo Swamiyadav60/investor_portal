@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { AuthModal } from '@/components/auth/AuthModal'
-import { ReservationModal } from '@/components/ui/ReservationModal'
-import { DEMO_COLLEGES } from '@/data/demo'
+import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
 import { useAuth } from '@/contexts/AuthContext'
 import type { College } from '@/types/database'
@@ -13,7 +13,20 @@ export function LandingPage() {
   const { hash } = useLocation()
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [colleges, setColleges] = useState<College[]>([])
   const [showReserveModal, setShowReserveModal] = useState(false)
+
+  useEffect(() => {
+    async function fetchColleges() {
+      const { data, error } = await supabase.from('colleges').select('*').limit(3)
+      if (error) {
+        console.error('Error fetching colleges:', error)
+        return
+      }
+      setColleges(data as College[])
+    }
+    fetchColleges()
+  }, [])
 
   useEffect(() => {
     if (hash) {
@@ -41,12 +54,7 @@ export function LandingPage() {
     setShowAuthModal(false)
     setShowReserveModal(true)
   }
-  const stats = [
-    { label: 'Colleges Available', value: '150+' },
-    { label: 'Student Reach', value: '1.2M+' },
-    { label: 'Active Investors', value: '450+' },
-    { label: 'Monthly Revenue', value: '₹45L+' },
-  ]
+
 
   const steps = [
     { title: 'Pick a Location', desc: 'Browse premium high-traffic college campuses and transit hubs.' },
@@ -77,22 +85,57 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="stats-section">
+      {/* Numbers Section */}
+      <section className="numbers-section">
         <div className="public-container">
-          <div className="stats-grid">
-            {stats.map((s) => (
-              <div key={s.label} className="stat-item">
-                <div className="stat-val">{s.value}</div>
-                <div className="stat-lbl">{s.label}</div>
-              </div>
-            ))}
+          <div className="numbers-header">
+            <span className="numbers-label">BY THE NUMBERS</span>
+          </div>
+          
+          <div className="numbers-grid">
+            <div className="num-item">
+              <div className="num-val">₹25,000</div>
+              <div className="num-desc">One-time slot investment.<br/>Hardware & setup included.</div>
+            </div>
+            <div className="num-item">
+              <div className="num-val">₹3,500<span className="num-plus">+</span></div>
+              <div className="num-desc">Average monthly passive<br/>income per printer slot</div>
+            </div>
+            <div className="num-item">
+              <div className="num-val">8 <span className="num-mo">mo</span></div>
+              <div className="num-desc">Typical full payback period.<br/>Profitable from month 9 onward.</div>
+            </div>
+            <div className="num-item">
+              <div className="num-val">200<span className="num-plus">+</span></div>
+              <div className="num-desc">Printers already active across<br/>Hyderabad, Bengaluru & Chennai</div>
+            </div>
+          </div>
+
+          <div className="numbers-divider"></div>
+
+          <div className="numbers-actions">
+            <button 
+              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })} 
+              className="num-btn num-btn-dark"
+            >
+              <span className="num-btn-dot"></span>
+              Join waitlist →
+            </button>
+            <button 
+              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })} 
+              className="num-btn num-btn-gold"
+            >
+              <svg className="num-btn-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Join priority waitlist <span className="num-btn-price">₹499</span>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Locations Preview */}
-      <section className="locations-preview">
+      <section id="locations-preview" className="locations-preview">
         <div className="public-container">
           <div className="section-header">
             <div>
@@ -103,7 +146,7 @@ export function LandingPage() {
           </div>
           
           <div className="available-grid">
-            {DEMO_COLLEGES.slice(0, 3).map((s) => {
+            {colleges.map((s) => {
               const left = s.slots_total - s.slots_taken
               return (
                 <div key={s.id} className="av-card">
@@ -175,7 +218,7 @@ export function LandingPage() {
                 <li><strong>Realtime Tracking:</strong> Monitor every single print job from your phone.</li>
                 <li><strong>High ROI:</strong> Most investors recover their capital within 12-14 months.</li>
               </ul>
-              <Link to="/login" className="hero-btn-primary" style={{ marginTop: '2rem' }}>Get Started Today</Link>
+              <Link to="/login" className="hero-btn-primary" style={{ marginTop: '2rem', backgroundColor: 'var(--white)', color: 'var(--ink)', border: '1px solid var(--border)' }}>Get Started Today</Link>
             </div>
             <div className="benefits-visual">
               <div className="benefits-circle" />
@@ -190,11 +233,13 @@ export function LandingPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
       />
-      <ReservationModal
-        college={selectedCollege}
-        isOpen={showReserveModal}
-        onClose={() => setShowReserveModal(false)}
-      />
+      {selectedCollege && (
+        <InvestorWaitlistModal
+          college={selectedCollege}
+          isOpen={showReserveModal}
+          onClose={() => setShowReserveModal(false)}
+        />
+      )}
 
       <footer className="public-footer">
         <div className="public-container">

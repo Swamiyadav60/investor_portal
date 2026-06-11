@@ -11,10 +11,8 @@ import { LandingPage } from '@/pages/public/LandingPage'
 import { LocationsPage } from '@/pages/public/LocationsPage'
 import { DashboardPage } from '@/pages/investor/DashboardPage'
 import { KiosksPage } from '@/pages/investor/KiosksPage'
-import { EarningsPage } from '@/pages/investor/EarningsPage'
 import { PayoutsPage } from '@/pages/investor/PayoutsPage'
 import { ReportsPage } from '@/pages/investor/ReportsPage'
-import { LiveActivityPage } from '@/pages/investor/LiveActivityPage'
 import { ProfilePage } from '@/pages/investor/ProfilePage'
 import { WaitlistPage } from '@/pages/investor/WaitlistPage'
 import { AdminCollegesPage } from '@/pages/admin/AdminCollegesPage'
@@ -46,10 +44,8 @@ export default function App() {
             <Route element={<ProtectedRoute><InvestorLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/kiosks" element={<KiosksPage />} />
-              <Route path="/earnings" element={<EarningsPage />} />
               <Route path="/payouts" element={<PayoutsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/live" element={<LiveActivityPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/waitlist" element={<WaitlistPage />} />
             </Route>
