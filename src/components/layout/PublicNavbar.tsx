@@ -5,13 +5,6 @@ export function PublicNavbar() {
   const { investor } = useAuth()
   const navigate = useNavigate()
 
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-
   return (
     <nav className="public-nav">
       <div className="public-nav-container">
@@ -21,9 +14,10 @@ export function PublicNavbar() {
         </Link>
 
         <div className="public-nav-links">
+          <Link to="/" className="public-nav-link">Home</Link>
           <Link to="/locations" className="public-nav-link">Available Locations</Link>
-          <button onClick={() => scrollToSection('how-it-works')} className="public-nav-link-btn">How It Works</button>
-          <button onClick={() => scrollToSection('benefits')} className="public-nav-link-btn">Investor Benefits</button>
+          <Link to="/#how-it-works" className="public-nav-link">How It Works</Link>
+          <Link to="/#benefits" className="public-nav-link">Investor Benefits</Link>
         </div>
 
         <div className="public-nav-actions">

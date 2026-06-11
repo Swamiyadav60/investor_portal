@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { ReservationModal } from '@/components/ui/ReservationModal'
@@ -10,9 +10,23 @@ import type { College } from '@/types/database'
 
 export function LandingPage() {
   const { investor } = useAuth()
+  const { hash } = useLocation()
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showReserveModal, setShowReserveModal] = useState(false)
+
+  useEffect(() => {
+    if (hash) {
+      const id = hash.replace('#', '')
+      const element = document.getElementById(id)
+      if (element) {
+        // Add a slight delay to ensure content is loaded
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }, 100)
+      }
+    }
+  }, [hash])
 
   const handleReserveClick = (college: College) => {
     setSelectedCollege(college)

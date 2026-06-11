@@ -48,13 +48,13 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
+      <Link to="/" className="sidebar-logo">
         <div className="sidebar-logo-dot" />
         <div>
           <div className="sidebar-logo-text">Smart Printer</div>
           <div className="sidebar-logo-sub">{admin ? 'Admin Portal' : 'Investor Portal'}</div>
         </div>
-      </div>
+      </Link>
       <div className="sidebar-section">Menu</div>
       <nav className="sidebar-nav">
         {nav.map((item) => (

@@ -1,21 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { ToggleGroup } from '@/components/ui/ToggleGroup'
 import { AuthModal } from '@/components/auth/AuthModal'
-import { ReservationModal } from '@/components/ui/ReservationModal'
-import { DEMO_COLLEGES } from '@/data/demo'
+import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
-import { useAuth } from '@/contexts/AuthContext' // <--- Added useAuth import
-import type { College } from '@/types/database' // <--- Added College type import
+import { useAuth } from '@/contexts/AuthContext'
+import type { College } from '@/types/database'
 
 export function LocationsPage() {
-  const { investor } = useAuth() // <--- Initialized useAuth
+  const { investor } = useAuth()
+  const [colleges, setColleges] = useState<College[]>([])
   const [slotFilter, setSlotFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showReserveModal, setShowReserveModal] = useState(false)
-  const [selectedCollege, setSelectedCollege] = useState<College | null>(null) // <--- Corrected type
-  const filtered = slotFilter === 'all' ? DEMO_COLLEGES : DEMO_COLLEGES.filter((s) => s.type === slotFilter)
+  const [selectedCollege, setSelectedCollege] = useState<College | null>(null)
+
+  useEffect(() => {
+    async function fetchColleges() {
+      const { data, error } = await supabase.from('colleges').select('*')
+      if (error) {
+        console.error('Error fetching colleges:', error)
+        return
+      }
+      setColleges(data as College[])
+    }
+    fetchColleges()
+  }, [])
+  
+  const filtered = colleges.filter((s) => {
+    const matchesType = slotFilter === 'all' || s.type === slotFilter
+    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.location.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesType && matchesSearch
+  })
 
   const handleReserveClick = (college: College) => { // <--- Corrected type for college parameter
     setSelectedCollege(college)
@@ -42,6 +61,14 @@ export function LocationsPage() {
             <p className="section-subtitle">Browse and reserve your preferred campus slots</p>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search locations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="printer-dropdown"
+              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)' }}
+            />
             <span style={{ fontSize: 14, color: 'var(--gray)', fontWeight: 500 }}>Filter by type:</span>
             <ToggleGroup
               options={[
@@ -115,11 +142,13 @@ export function LocationsPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
       />
-      <ReservationModal
-        college={selectedCollege}
-        isOpen={showReserveModal}
-        onClose={() => setShowReserveModal(false)}
-      />
+      {selectedCollege && (
+        <InvestorWaitlistModal
+          college={selectedCollege}
+          isOpen={showReserveModal}
+          onClose={() => setShowReserveModal(false)}
+        />
+      )}
 
       <footer className="public-footer">
         <div className="public-container">
