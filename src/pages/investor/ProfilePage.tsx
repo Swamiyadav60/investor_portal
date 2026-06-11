@@ -166,7 +166,7 @@ export function ProfilePage() {
             <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>Request slot transfer</button>
             <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>Close investor account</button>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>These actions require verification and are processed by the VPrint support team.</div>
+          <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>These actions require verification and are processed by the Smart Printer support team.</div>
         </div>
       </div>
     </>

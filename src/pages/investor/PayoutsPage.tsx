@@ -42,7 +42,7 @@ export function PayoutsPage() {
         Status: p.status,
         Processed: p.processed_at || '',
       })),
-      'vprint-payouts.csv'
+      'smartprinter-payouts.csv'
     )
   }
 

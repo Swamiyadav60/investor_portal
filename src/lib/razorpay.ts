@@ -63,7 +63,7 @@ export async function initiatePayment(options: {
     key: RAZORPAY_KEY,
     amount: options.amount * 100,
     currency: 'INR',
-    name: 'VPrint',
+    name: 'Smart Printer',
     description: options.description,
     order_id: options.orderId,
     handler: options.onSuccess,

@@ -3,8 +3,17 @@ export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance'
 export type ExpenseType = 'variable' | 'fixed'
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled'
 export type PaymentType = 'payout' | 'withdrawal' | 'investment'
-export type KycStatus = 'pending' | 'verified' | 'rejected'
+export type KycStatus = 'pending' | 'verified' | 'rejected' | 'unverified'
 export type WaitlistStatus = 'pending' | 'approved' | 'rejected' | 'converted'
+
+export interface AdminKpis {
+  total_colleges: number
+  available_slots: number
+  free_waitlists: number
+  priority_waitlists: number
+  priority_waitlist_revenue: number
+}
+
 
 export interface NotificationPrefs {
   job_alerts: boolean
@@ -144,6 +153,8 @@ export interface Waitlist {
   investor_id: string
   college_id: string
   status: WaitlistStatus
+  waitlist_type: 'free' | 'priority'
+  queue_position: number | null
   razorpay_order_id: string | null
   razorpay_payment_id: string | null
   notes: string | null

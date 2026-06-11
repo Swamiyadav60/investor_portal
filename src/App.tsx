@@ -7,6 +7,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { InvestorLayout } from '@/components/layout/InvestorLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { LandingPage } from '@/pages/public/LandingPage'
+import { LocationsPage } from '@/pages/public/LocationsPage'
 import { DashboardPage } from '@/pages/investor/DashboardPage'
 import { KiosksPage } from '@/pages/investor/KiosksPage'
 import { EarningsPage } from '@/pages/investor/EarningsPage'
@@ -14,6 +16,7 @@ import { PayoutsPage } from '@/pages/investor/PayoutsPage'
 import { ReportsPage } from '@/pages/investor/ReportsPage'
 import { LiveActivityPage } from '@/pages/investor/LiveActivityPage'
 import { ProfilePage } from '@/pages/investor/ProfilePage'
+import { WaitlistPage } from '@/pages/investor/WaitlistPage'
 import { AdminCollegesPage } from '@/pages/admin/AdminCollegesPage'
 import { AdminInvestorsPage } from '@/pages/admin/AdminInvestorsPage'
 import { AdminKiosksPage } from '@/pages/admin/AdminKiosksPage'
@@ -36,6 +39,8 @@ export default function App() {
         <ToastProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/locations" element={<LocationsPage />} />
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
 
             <Route element={<ProtectedRoute><InvestorLayout /></ProtectedRoute>}>
@@ -46,6 +51,7 @@ export default function App() {
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/live" element={<LiveActivityPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/waitlist" element={<WaitlistPage />} />
             </Route>
 
             <Route element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
@@ -59,7 +65,7 @@ export default function App() {
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
         </ToastProvider>

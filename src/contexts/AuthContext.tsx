@@ -59,17 +59,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else if (error) console.warn('Could not create investor profile:', error.message)
   }
 
-  const fetchInvestor = async (userId: string) => {
-    const { data } = await supabase
+  const fetchInvestor = async (userId: string, email: string) => {
+    let { data: investorData } = await supabase
       .from('investors')
       .select('*')
       .eq('user_id', userId)
-      .single()
-    if (data) setInvestor(data as Investor)
+      .maybeSingle() // Changed to maybeSingle()
+
+    if (!investorData) {
+      // If investor row is missing, ensure it's created and then refetch
+      await ensureInvestorProfile(userId, email) // Call ensure to create
+      ({ data: investorData } = await supabase // Refetch
+        .from('investors')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle())
+    }
+
+    if (investorData) setInvestor(investorData as Investor)
+    else setInvestor(null) // Ensure investor is null if still not found
   }
 
   const refreshInvestor = async () => {
-    if (user) await fetchInvestor(user.id)
+    if (user) await fetchInvestor(user.id, user.email!)
   }
 
   useEffect(() => {
@@ -81,14 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
       setUser(s?.user ?? null)
-      if (s?.user) fetchInvestor(s.user.id).finally(() => setLoading(false))
+      if (s?.user) fetchInvestor(s.user.id, s.user.email!).finally(() => setLoading(false))
       else setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
       setUser(s?.user ?? null)
-      if (s?.user) fetchInvestor(s.user.id)
+      if (s?.user) fetchInvestor(s.user.id, s.user.email!)
       else setInvestor(null)
     })
 

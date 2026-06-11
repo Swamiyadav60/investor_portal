@@ -86,7 +86,7 @@ export function ReportsPage() {
               <div className="rpt-card-title">Tax summary FY 2025–26</div>
             </div>
             <div className="rpt-tax-row"><span>Gross revenue received</span><span>₹1,24,560</span></div>
-            <div className="rpt-tax-row"><span>Expenses deducted by VPrint</span><span style={{ color: 'var(--red)' }}>− ₹67,720</span></div>
+            <div className="rpt-tax-row"><span>Expenses deducted by Smart Printer</span><span style={{ color: 'var(--red)' }}>− ₹67,720</span></div>
             <div className="rpt-tax-row" style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 10, fontWeight: 600 }}>
               <span>Net taxable income (est.)</span><span style={{ color: 'var(--green)' }}>₹56,840</span>
             </div>

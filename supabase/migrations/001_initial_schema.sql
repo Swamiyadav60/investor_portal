@@ -1,4 +1,4 @@
--- VPrint Investor Portal - Initial Schema
+-- Smart Printer Investor Portal - Initial Schema
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

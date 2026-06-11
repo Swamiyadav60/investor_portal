@@ -15,6 +15,7 @@ const investorNav: NavItem[] = [
   { to: '/payouts', label: 'Payouts', icon: <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> },
   { to: '/reports', label: 'Reports', icon: <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
   { to: '/live', label: 'Live Activity', icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg> },
+  { to: '/waitlist', label: 'My Waitlist', icon: <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
   { to: '/profile', label: 'Profile', icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg> },
 ]
 
@@ -50,7 +51,7 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
       <div className="sidebar-logo">
         <div className="sidebar-logo-dot" />
         <div>
-          <div className="sidebar-logo-text">VPrint</div>
+          <div className="sidebar-logo-text">Smart Printer</div>
           <div className="sidebar-logo-sub">{admin ? 'Admin Portal' : 'Investor Portal'}</div>
         </div>
       </div>

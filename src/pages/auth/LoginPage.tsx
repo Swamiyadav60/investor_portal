@@ -1,19 +1,26 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
 
 export function LoginPage() {
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(location.state?.isSignUp || false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, enterDemo } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (location.state?.isSignUp) {
+      setIsSignUp(true)
+    }
+  }, [location.state])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,7 +62,7 @@ export function LoginPage() {
         <div className="auth-logo">
           <div className="sidebar-logo-dot" />
           <div>
-            <div className="sidebar-logo-text" style={{ color: 'var(--ink)' }}>VPrint</div>
+            <div className="sidebar-logo-text" style={{ color: 'var(--ink)' }}>Smart Printer</div>
             <div className="sidebar-logo-sub">Investor Portal</div>
           </div>
         </div>

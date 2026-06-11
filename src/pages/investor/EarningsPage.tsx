@@ -21,7 +21,7 @@ export function EarningsPage() {
         'Net Profit': r.revenue - r.varExp - r.fixExp,
         'Your Share (70%)': (r.revenue - r.varExp - r.fixExp) * 0.7,
       })),
-      'vprint-earnings.csv'
+      'smartprinter-earnings.csv'
     )
   }
 
