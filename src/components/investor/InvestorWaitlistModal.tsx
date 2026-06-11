@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import type { College } from '@/types/database'
-import { fmt } from '@/lib/format'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { supabase } from '@/lib/supabase'
