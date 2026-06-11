@@ -66,24 +66,121 @@ export function LandingPage() {
     <div className="public-root">
       <PublicNavbar />
       
-      {/* Hero Section */}
-      <section className="hero-section">
+      {/* Premium Hero Section */}
+      <section className="hero-section premium-hero">
+        {/* Decorative mesh */}
+        <div className="hero-mesh" aria-hidden="true">
+          <div className="hero-orb hero-orb-1" />
+          <div className="hero-orb hero-orb-2" />
+          <div className="hero-grid-lines" />
+        </div>
+
         <div className="hero-container">
-          <div className="hero-content">
-            <span className="hero-badge">Now Open: Phase 4 Expansion</span>
-            <h1 className="hero-title">Smart Campus Printing Infrastructure</h1>
-            <p className="hero-subtitle">Invest in the future of education services. Reserve premium college locations and start earning passive income through automated smart kiosks.</p>
-            <div className="hero-btns">
-              <Link to="/locations" className="hero-btn-primary">View Available Slots</Link>
-              <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="hero-btn-secondary">Learn More</button>
+          {/* Left: Content */}
+          <div className="hero-content fade-up" style={{ animationDelay: '0s' }}>
+            <div className="hero-badge-premium fade-up" style={{ animationDelay: '0.1s' }}>
+              <span className="live-dot" />
+              <span>Now Open — Phase 4 Expansion</span>
+            </div>
+
+            <h1 className="hero-title fade-up" style={{ animationDelay: '0.2s' }}>
+              India's Smartest<br />
+              <span className="text-gradient">Campus Printing</span><br />
+              <span className="hero-title-sub">Investment Platform</span>
+            </h1>
+
+            <p className="hero-subtitle fade-up" style={{ animationDelay: '0.3s' }}>
+              Invest in automated VPrint kiosks across premium college campuses. 
+              <strong> ₹25,000 one-time</strong>, earn <strong>₹3,500+/month</strong> passive income — fully managed by us.
+            </p>
+
+            <div className="hero-btns fade-up" style={{ animationDelay: '0.4s' }}>
+              <Link to="/locations" className="hero-btn-primary">
+                View Available Slots
+                <svg className="btn-arrow" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </Link>
+              <button
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="hero-btn-secondary"
+              >
+                <span className="play-icon">▶</span> How it Works
+              </button>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="hero-trust fade-up" style={{ animationDelay: '0.5s' }}>
+              <div className="hero-trust-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Zero maintenance
+              </div>
+              <div className="hero-trust-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                8-month payback
+              </div>
+              <div className="hero-trust-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                200+ active printers
+              </div>
+            </div>
+
+            {/* Social Proof */}
+            <div className="hero-social-proof fade-up" style={{ animationDelay: '0.6s' }}>
+              <div className="avatar-group">
+                <img src="https://i.pravatar.cc/100?img=11" alt="Investor" className="avatar" />
+                <img src="https://i.pravatar.cc/100?img=32" alt="Investor" className="avatar" />
+                <img src="https://i.pravatar.cc/100?img=12" alt="Investor" className="avatar" />
+                <img src="https://i.pravatar.cc/100?img=48" alt="Investor" className="avatar" />
+                <div className="avatar-more">+</div>
+              </div>
+              <div className="social-text">
+                <strong>450+ investors</strong> already earning passive income
+              </div>
             </div>
           </div>
-          <div className="hero-image-wrap">
-             <div className="hero-image-gradient" />
-             <img src="/src/assets/hero.png" alt="VPrint Kiosk" className="hero-image" />
+
+          {/* Right: Image + Floating Cards */}
+          <div className="hero-image-wrap fade-in" style={{ animationDelay: '0.3s' }}>
+            <div className="hero-image-bg" />
+            <div className="hero-image-gradient" />
+
+            {/* Floating stat card — top left */}
+            <div className="hero-floating-card card-1 float-anim">
+              <div className="fc-icon">📈</div>
+              <div className="fc-text">
+                <div className="fc-val">₹3,500+</div>
+                <div className="fc-lbl">Avg. Monthly Earnings</div>
+              </div>
+            </div>
+
+            {/* Floating stat card — bottom right */}
+            <div className="hero-floating-card card-2 float-anim-delayed">
+              <div className="fc-icon">⚡</div>
+              <div className="fc-text">
+                <div className="fc-val">100%</div>
+                <div className="fc-lbl">Passive — We Handle All</div>
+              </div>
+            </div>
+
+            {/* Floating ROI card — bottom left */}
+            <div className="hero-floating-card card-3 float-anim">
+              <div className="fc-icon">🏆</div>
+              <div className="fc-text">
+                <div className="fc-val">8 mo</div>
+                <div className="fc-lbl">Avg. Payback Period</div>
+              </div>
+            </div>
+
+            <img
+              src="/src/assets/hero.png"
+              alt="VPrint Smart Kiosk"
+              className="hero-image"
+            />
           </div>
         </div>
       </section>
+
 
       {/* Numbers Section */}
       <section className="numbers-section">
