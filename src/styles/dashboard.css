@@ -752,7 +752,26 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 /* Steps */
 .how-it-works {
   padding: 100px 0;
-  background: var(--white);
+  background: #111110;
+  border-top: 1px solid var(--sidebar-border);
+  border-bottom: 1px solid var(--sidebar-border);
+  color: var(--white);
+}
+
+.how-it-works .section-title {
+  color: var(--white);
+}
+
+.how-it-works .step-card {
+  background: var(--bg);
+}
+
+.how-it-works .step-title {
+  color: var(--ink);
+}
+
+.how-it-works .step-desc {
+  color: var(--gray);
 }
 
 .steps-grid {
@@ -863,27 +882,146 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 }
 
 /* Footer */
-.public-footer {
-  background: var(--sidebar);
-  padding: 60px 0 40px;
+.site-footer {
+  background: #111110;
+  padding: 80px 0 40px;
+  color: #888780;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.footer-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+
+.footer-heading {
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.footer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-list a {
+  color: #888780;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.footer-list a:hover {
+  color: #fff;
+}
+
+.footer-link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hiring-badge {
+  background: rgba(26, 155, 108, 0.15);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.footer-contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-contact-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
   color: #888780;
 }
 
-.footer-top {
-  margin-bottom: 40px;
-  border-bottom: 1px solid var(--sidebar-border);
-  padding-bottom: 40px;
+.footer-contact-list a {
+  color: #888780;
+  text-decoration: none;
+  transition: color 0.2s;
 }
 
-.footer-tagline {
-  margin-top: 1rem;
+.footer-contact-list a:hover {
+  color: #fff;
+}
+
+.contact-icon {
+  opacity: 0.6;
+  font-size: 16px;
+}
+
+.support-hours {
+  font-size: 13px;
+}
+
+.support-lbl {
+  color: #6B6960;
+  margin-bottom: 6px;
+}
+
+.support-val {
+  color: #888780;
+}
+
+.footer-bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 14px;
 }
 
-.footer-bottom {
+.footer-legal-links {
   display: flex;
-  justify-content: space-between;
-  font-size: 12px;
+  gap: 24px;
+}
+
+.footer-legal-links a {
+  color: #6B6960;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-legal-links a:hover {
+  color: #888780;
 }
 
 /* Reservation Flow */
@@ -1133,6 +1271,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
   .benefits-content {
     padding: 3rem 2rem;
   }
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  .footer-brand-col {
+    grid-column: span 2;
+    margin-bottom: 1rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1151,6 +1297,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
   }
   .num-btn {
     width: 100%;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .footer-brand-col {
+    grid-column: span 1;
+  }
+  .footer-bottom-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  .footer-legal-links {
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 }
 

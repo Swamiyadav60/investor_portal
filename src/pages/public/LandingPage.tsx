@@ -241,19 +241,78 @@ export function LandingPage() {
         />
       )}
 
-      <footer className="public-footer">
+      <footer className="site-footer">
         <div className="public-container">
-          <div className="footer-top">
-            <div className="footer-brand">
-              <div className="public-nav-logo">
-                <div className="sidebar-logo-dot" />
-                <div className="sidebar-logo-text" style={{ color: '#fff' }}>Smart Printer</div>
+          <div className="footer-grid">
+            <div className="footer-brand-col">
+              <div className="footer-logo">
+                <div className="sidebar-logo-dot" style={{ backgroundColor: 'var(--green)' }} />
+                <div className="sidebar-logo-text">Smart Printer</div>
               </div>
-              <p className="footer-tagline">Building India's largest smart printing network.</p>
+              <p className="footer-desc">
+                Building India's largest smart printing network. Passive income for investors, convenience for customers.
+              </p>
+            </div>
+            
+            <div className="footer-links-col">
+              <h4 className="footer-heading">COMPANY</h4>
+              <ul className="footer-list">
+                <li><Link to="#">About Us</Link></li>
+                <li><Link to="#">How It Works</Link></li>
+                <li>
+                  <Link to="#" className="footer-link-badge">
+                    Careers <span className="hiring-badge">Hiring</span>
+                  </Link>
+                </li>
+                <li><Link to="#">Press & Media</Link></li>
+                <li><Link to="#">Blog</Link></li>
+              </ul>
+            </div>
+
+            <div className="footer-links-col">
+              <h4 className="footer-heading">INVESTORS</h4>
+              <ul className="footer-list">
+                <li><Link to="#">Investor Portal</Link></li>
+                <li><Link to="/locations">Available Locations</Link></li>
+                <li><Link to="#">ROI Calculator</Link></li>
+                <li><Link to="#">Testimonials</Link></li>
+                <li><Link to="#">FAQs</Link></li>
+              </ul>
+            </div>
+
+            <div className="footer-contact-col">
+              <h4 className="footer-heading">CONTACT</h4>
+              <ul className="footer-contact-list">
+                <li>
+                  <span className="contact-icon">✉</span>
+                  <a href="mailto:zayvionprivatelimited@gmail.com">zayvionprivatelimited@gmail.com</a>
+                </li>
+                <li>
+                  <span className="contact-icon">☎</span>
+                  <a href="tel:+918143632036">+91 8143632036</a>
+                </li>
+                <li>
+                  <span className="contact-icon">📍</span>
+                  <span>Hyderabad, India</span>
+                </li>
+              </ul>
+              <div className="support-hours">
+                <div className="support-lbl">Support hours</div>
+                <div className="support-val">Mon–Sat, 9am – 7pm IST</div>
+              </div>
             </div>
           </div>
-          <div className="footer-bottom">
-            <p>© 2026 VPrint Systems Pvt Ltd. All rights reserved.</p>
+
+          <div className="footer-bottom-bar">
+            <div className="footer-copyright">
+              © 2026 Zayvion Pvt Ltd. All rights reserved.
+            </div>
+            <div className="footer-legal-links">
+              <Link to="#">Privacy Policy</Link>
+              <Link to="#">Terms of Service</Link>
+              <Link to="#">Cookie Policy</Link>
+              <Link to="#">Sitemap</Link>
+            </div>
           </div>
         </div>
       </footer>
