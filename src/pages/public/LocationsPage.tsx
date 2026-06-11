@@ -1,26 +1,34 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { ToggleGroup } from '@/components/ui/ToggleGroup'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { ReservationModal } from '@/components/ui/ReservationModal'
 import { DEMO_COLLEGES } from '@/data/demo'
 import { fmt } from '@/lib/format'
+import { useAuth } from '@/contexts/AuthContext' // <--- Added useAuth import
+import type { College } from '@/types/database' // <--- Added College type import
 
 export function LocationsPage() {
+  const { investor } = useAuth() // <--- Initialized useAuth
   const [slotFilter, setSlotFilter] = useState('all')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showReserveModal, setShowReserveModal] = useState(false)
-  const [selectedCollege, setSelectedCollege] = useState(null)
+  const [selectedCollege, setSelectedCollege] = useState<College | null>(null) // <--- Corrected type
   const filtered = slotFilter === 'all' ? DEMO_COLLEGES : DEMO_COLLEGES.filter((s) => s.type === slotFilter)
 
-  const handleReserveClick = (college: any) => {
+  const handleReserveClick = (college: College) => { // <--- Corrected type for college parameter
     setSelectedCollege(college)
-    setShowReserveModal(true)
+    if (!investor) { // <--- Added conditional logic
+      setShowAuthModal(true)
+    } else {
+      setShowReserveModal(true)
+    }
   }
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false)
+    setShowReserveModal(true) // <--- Open reservation modal after successful auth
   }
 
   return (
@@ -102,17 +110,16 @@ export function LocationsPage() {
         </div>
       </div>
 
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-        onSuccess={handleAuthSuccess} 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={handleAuthSuccess}
       />
-      <ReservationModal 
-        college={selectedCollege} 
-        isOpen={showReserveModal} 
-        onClose={() => setShowReserveModal(false)} 
+      <ReservationModal
+        college={selectedCollege}
+        isOpen={showReserveModal}
+        onClose={() => setShowReserveModal(false)}
       />
-
 
       <footer className="public-footer">
         <div className="public-container">
@@ -124,3 +131,4 @@ export function LocationsPage() {
     </div>
   )
 }
+

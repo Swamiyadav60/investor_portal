@@ -118,7 +118,13 @@ export function LandingPage() {
                         <div className="av-earn-lbl">Avg earnings /mo</div>
                       </div>
                     </div>
-                    <Link to="/login" className="av-invest-btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Reserve Now →</Link>
+                    <button
+                      onClick={() => handleReserveClick(s)}
+                      className="av-invest-btn"
+                      style={{ width: '100%', display: 'block', textAlign: 'center' }}
+                    >
+                      Reserve Now →
+                    </button>
                   </div>
                 </div>
               )
@@ -163,6 +169,18 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Modals */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={handleAuthSuccess}
+      />
+      <ReservationModal
+        college={selectedCollege}
+        isOpen={showReserveModal}
+        onClose={() => setShowReserveModal(false)}
+      />
 
       <footer className="public-footer">
         <div className="public-container">

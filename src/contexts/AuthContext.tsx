@@ -68,12 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!investorData) {
       // If investor row is missing, ensure it's created and then refetch
-      await ensureInvestorProfile(userId, email) // Call ensure to create
-      ({ data: investorData } = await supabase // Refetch
-        .from('investors')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle())
+      await ensureInvestorProfile(userId, email); // Call ensure to create
+        ({ data: investorData } = await supabase // Refetch
+          .from('investors')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle())
     }
 
     if (investorData) setInvestor(investorData as Investor)

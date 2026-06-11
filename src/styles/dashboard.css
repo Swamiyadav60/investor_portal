@@ -1005,7 +1005,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 }
 
 .priority-tag {
-...
   font-size: 10px;
   font-weight: 700;
   color: var(--amber);

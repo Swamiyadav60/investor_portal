@@ -22,7 +22,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
   const reservationMutation = useMutation({
     mutationFn: async (paymentId: string | null = null) => {
       if (!college || !investor) return
-      
+
       if (!isSupabaseConfigured) {
         return { position: type === 'priority' ? 1 : Math.floor(Math.random() * 20) + 5, isPriority: type === 'priority' }
       }
@@ -35,9 +35,9 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         p_payment_id: paymentId,
         p_notes: type === 'priority' ? `Priority Waitlist (Paid ₹499 via Razorpay)` : 'Free Waitlist'
       })
-      
+
       if (error) throw error
-      
+
       return { position: pos as number, isPriority: type === 'priority' }
     },
     onSuccess: (data) => {
@@ -64,7 +64,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         toast(err.message || 'Payment initiation failed', 'error')
       }
     } else {
-      reservationMutation.mutate()
+      reservationMutation.mutate(null)
     }
   }
 
@@ -81,19 +81,19 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, textAlign: 'center', padding: '2.5rem 1.5rem' }}>
           <div className="success-icon-wrap" style={{ background: successData.isPriority ? 'var(--amber-l)' : 'var(--green-l)' }}>
             <svg viewBox="0 0 24 24" className="success-icon" style={{ stroke: successData.isPriority ? 'var(--amber)' : 'var(--green)' }}>
-              <polyline points="20 6 9 17 4 12"/>
+              <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          
+
           <h2 className="section-title" style={{ fontSize: 20, marginBottom: '0.5rem' }}>
             {successData.isPriority ? 'Payment Successful' : 'Successfully Joined Waitlist'}
           </h2>
           <p className="section-subtitle" style={{ marginBottom: '1.5rem' }}>
-            {successData.isPriority 
+            {successData.isPriority
               ? `You are now in the Priority Waitlist for ${college.name}`
               : `You are now in queue for ${college.name}`}
           </p>
-          
+
           <div className="queue-pill" style={{ borderColor: successData.isPriority ? 'var(--amber)' : 'var(--border)' }}>
             <div className="queue-lbl">Your Position</div>
             <div className="queue-val" style={{ color: successData.isPriority ? 'var(--amber)' : 'var(--ink)' }}>
@@ -124,7 +124,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         </div>
 
         <div className="reservation-options">
-          <div 
+          <div
             className={`reservation-option ${type === 'free' ? 'active' : ''}`}
             onClick={() => setType('free')}
           >
@@ -135,7 +135,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
             </div>
           </div>
 
-          <div 
+          <div
             className={`reservation-option ${type === 'priority' ? 'active' : ''}`}
             onClick={() => setType('priority')}
           >
@@ -162,15 +162,15 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
           </div>
         </div>
 
-        <button 
-          className="av-invest-btn" 
+        <button
+          className="av-invest-btn"
           style={{ marginTop: '1.5rem', padding: '12px' }}
           onClick={handleReserve}
           disabled={reservationMutation.isPending}
         >
           {reservationMutation.isPending ? 'Processing...' : type === 'priority' ? 'Pay ₹499 & Reserve' : 'Join Free Waitlist'}
         </button>
-        
+
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--gray)', marginTop: '1rem' }}>
           By clicking, you agree to Smart Printer Investor Terms & Conditions.
         </p>
