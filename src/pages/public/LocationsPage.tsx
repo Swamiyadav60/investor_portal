@@ -59,26 +59,28 @@ export function LocationsPage() {
             <h1 className="section-title" style={{ fontSize: '2rem' }}>Available Locations</h1>
             <p className="section-subtitle">Browse and reserve your preferred campus slots</p>
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="Search locations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="printer-dropdown"
-              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)' }}
+              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)', flex: '1 1 200px' }}
             />
-            <span style={{ fontSize: 14, color: 'var(--gray)', fontWeight: 500 }}>Filter by type:</span>
-            <ToggleGroup
-              options={[
-                { key: 'all', label: 'All' },
-                { key: 'college', label: 'College' },
-                { key: 'transit', label: 'Transit' },
-                { key: 'commercial', label: 'Commercial' },
-              ]}
-              value={slotFilter}
-              onChange={setSlotFilter}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, color: 'var(--gray)', fontWeight: 500, whiteSpace: 'nowrap' }}>Filter by type:</span>
+              <ToggleGroup
+                options={[
+                  { key: 'all', label: 'All' },
+                  { key: 'college', label: 'College' },
+                  { key: 'transit', label: 'Transit' },
+                  { key: 'commercial', label: 'Commercial' },
+                ]}
+                value={slotFilter}
+                onChange={setSlotFilter}
+              />
+            </div>
           </div>
         </div>
 

@@ -66,7 +66,7 @@ export function LandingPage() {
   return (
     <div className="public-root">
       <PublicNavbar />
-      
+
       {/* Premium Hero Section */}
       <section className="hero-section premium-hero">
         {/* Decorative mesh */}
@@ -81,7 +81,7 @@ export function LandingPage() {
           <div className="hero-content fade-up" style={{ animationDelay: '0s' }}>
             <div className="hero-badge-premium fade-up" style={{ animationDelay: '0.1s' }}>
               <span className="live-dot" />
-              <span>Now Open — Phase 4 Expansion</span>
+              <span>Now Open — Phase 2 Expansion</span>
             </div>
 
             <h1 className="hero-title fade-up" style={{ animationDelay: '0.2s' }}>
@@ -91,8 +91,8 @@ export function LandingPage() {
             </h1>
 
             <p className="hero-subtitle fade-up" style={{ animationDelay: '0.3s' }}>
-              Invest in automated VPrint kiosks across premium college campuses. 
-              <strong> ₹25,000 one-time</strong>, earn <strong>₹3,500+/month</strong> passive income — fully managed by us.
+              Invest in automated VPrint kiosks across premium college campuses.
+              <strong> ₹30,000 one-time</strong>, earn <strong>₹3,500+/month</strong> passive income — fully managed by us.
             </p>
 
             <div className="hero-btns fade-up" style={{ animationDelay: '0.4s' }}>
@@ -113,16 +113,16 @@ export function LandingPage() {
             {/* Trust indicators */}
             <div className="hero-trust fade-up" style={{ animationDelay: '0.5s' }}>
               <div className="hero-trust-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                 Zero maintenance
               </div>
               <div className="hero-trust-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                 8-month payback
               </div>
               <div className="hero-trust-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                200+ active printers
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                20+ active printers
               </div>
             </div>
 
@@ -136,7 +136,7 @@ export function LandingPage() {
                 <div className="avatar-more">+</div>
               </div>
               <div className="social-text">
-                <strong>450+ investors</strong> already earning passive income
+                <strong>15+ investors</strong> already earning passive income
               </div>
             </div>
           </div>
@@ -168,7 +168,7 @@ export function LandingPage() {
             <div className="hero-floating-card card-3 float-anim">
               <div className="fc-icon">🏆</div>
               <div className="fc-text">
-                <div className="fc-val">8 mo</div>
+                <div className="fc-val">8 months</div>
                 <div className="fc-lbl">Avg. Payback Period</div>
               </div>
             </div>
@@ -189,38 +189,38 @@ export function LandingPage() {
           <div className="numbers-header">
             <span className="numbers-label">BY THE NUMBERS</span>
           </div>
-          
+
           <div className="numbers-grid">
             <div className="num-item">
-              <div className="num-val">₹25,000</div>
-              <div className="num-desc">One-time slot investment.<br/>Hardware & setup included.</div>
+              <div className="num-val">₹30,000</div>
+              <div className="num-desc">One-time slot investment.<br />Hardware & setup included.</div>
             </div>
             <div className="num-item">
               <div className="num-val">₹3,500<span className="num-plus">+</span></div>
-              <div className="num-desc">Average monthly passive<br/>income per printer slot</div>
+              <div className="num-desc">Average monthly passive<br />income per printer slot</div>
             </div>
             <div className="num-item">
-              <div className="num-val">8 <span className="num-mo">mo</span></div>
-              <div className="num-desc">Typical full payback period.<br/>Profitable from month 9 onward.</div>
+              <div className="num-val">8 <span className="num-mo">months</span></div>
+              <div className="num-desc">Typical full payback period.<br />Profitable from month 9 onward.</div>
             </div>
             <div className="num-item">
-              <div className="num-val">200<span className="num-plus">+</span></div>
-              <div className="num-desc">Printers already active across<br/>Hyderabad, Bengaluru & Chennai</div>
+              <div className="num-val">20<span className="num-plus">+</span></div>
+              <div className="num-desc">Printers already active across<br />Hyderabad</div>
             </div>
           </div>
 
           <div className="numbers-divider"></div>
 
           <div className="numbers-actions">
-            <button 
-              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })} 
+            <button
+              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })}
               className="num-btn num-btn-dark"
             >
               <span className="num-btn-dot"></span>
               Join waitlist →
             </button>
-            <button 
-              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })} 
+            <button
+              onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })}
               className="num-btn num-btn-gold"
             >
               <svg className="num-btn-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -240,9 +240,9 @@ export function LandingPage() {
               <h2 className="section-title">Premium Locations</h2>
               <p className="section-subtitle">High-traffic zones with guaranteed student footfall</p>
             </div>
-            <Link to="/locations" className="view-all-link">View all 150+ locations →</Link>
+            <Link to="/locations" className="view-all-link">View all 15+ locations →</Link>
           </div>
-          
+
           <div className="available-grid">
             {colleges.map((s) => {
               const left = s.slots_total - s.slots_taken
@@ -255,7 +255,7 @@ export function LandingPage() {
                   <div className="av-card-content" style={{ padding: '1.25rem' }}>
                     <div className="av-name">{s.name}</div>
                     <div className="av-meta" style={{ marginBottom: '1rem' }}>{s.location}</div>
-                    
+
                     <div className="av-stats-mini">
                       <div className="av-mini-stat">
                         <div className="av-mini-val">4.5k+</div>
@@ -351,7 +351,7 @@ export function LandingPage() {
                 Building India's largest smart printing network. Passive income for investors, convenience for customers.
               </p>
             </div>
-            
+
             <div className="footer-links-col">
               <h4 className="footer-heading">COMPANY</h4>
               <ul className="footer-list">
