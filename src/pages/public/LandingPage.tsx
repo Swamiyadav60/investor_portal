@@ -91,7 +91,7 @@ export function LandingPage() {
             </h1>
 
             <p className="hero-subtitle fade-up" style={{ animationDelay: '0.3s' }}>
-              Invest in automated VPrint kiosks across premium college campuses.
+              Invest in automated Smart Printer kiosks across premium college campuses.
               <strong> ₹30,000 one-time</strong>, earn <strong>₹3,500+/month</strong> passive income — fully managed by us.
             </p>
 
@@ -175,7 +175,7 @@ export function LandingPage() {
 
             <img
               src={heroImage}
-              alt="VPrint Smart Kiosk"
+              alt="Smart Printer Smart Kiosk"
               className="hero-image"
             />
           </div>

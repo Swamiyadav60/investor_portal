@@ -24,7 +24,7 @@ export function ReportsPage() {
           'Your Share (70%)': profit * 0.7,
         }
       }),
-      'vprint-monthly-pl.csv'
+      'Smart_Printer-monthly-pl.csv'
     )
   }
 

@@ -103,7 +103,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
           </div>
 
           <p style={{ fontSize: 13, color: 'var(--gray)', margin: '1.5rem 0' }}>
-            The VPrint team will contact you soon with the next steps for your investment.
+            The Smart Printer team will contact you soon with the next steps for your investment.
           </p>
 
           <button className="av-invest-btn" onClick={handleClose}>Got it</button>
