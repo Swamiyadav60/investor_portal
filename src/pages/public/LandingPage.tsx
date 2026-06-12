@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
 import { useAuth } from '@/contexts/AuthContext'
 import type { College } from '@/types/database'
+import heroImage from '@/assets/hero.png'
 
 export function LandingPage() {
   const { investor } = useAuth()
@@ -173,7 +174,7 @@ export function LandingPage() {
             </div>
 
             <img
-              src="/src/assets/hero.png"
+              src={heroImage}
               alt="VPrint Smart Kiosk"
               className="hero-image"
             />
