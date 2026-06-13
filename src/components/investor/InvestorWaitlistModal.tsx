@@ -7,11 +7,15 @@ import { supabase } from '@/lib/supabase'
 import { initiatePayment } from '@/lib/razorpay'
 import { useToast } from '@/components/ui/Toast'
 
+// 1. Update the interface
 interface InvestorWaitlistModalProps {
   college: College
   isOpen: boolean
   onClose: () => void
+  onSuccess?: (collegeId: string) => void  // ← add this line
 }
+
+
 
 const FEATURES = [
   { label: 'Join investor queue', free: true, priority: true },
@@ -24,7 +28,10 @@ const FEATURES = [
   { label: 'Early investment notifications', free: false, priority: true },
 ]
 
-export function InvestorWaitlistModal({ college, isOpen, onClose }: InvestorWaitlistModalProps) {
+// 2. Update the function signature
+export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: InvestorWaitlistModalProps) {
+
+
   const { investor } = useAuth()
   const { toast } = useToast()
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -53,8 +60,10 @@ export function InvestorWaitlistModal({ college, isOpen, onClose }: InvestorWait
       if (error) throw error
       return { position: pos as number, type }
     },
+    //3. In reservationMutation, update onSuccess:
     onSuccess: (data) => {
       setSuccessData(data)
+      onSuccess?.(college.id)   // ← add this line
     },
     onError: (err: any) => {
       toast(err.message, 'error')

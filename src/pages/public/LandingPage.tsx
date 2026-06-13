@@ -16,33 +16,64 @@ export function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [colleges, setColleges] = useState<College[]>([])
   const [showReserveModal, setShowReserveModal] = useState(false)
+  const [reservedCollegeIds, setReservedCollegeIds] = useState<Set<string>>(new Set())
 
+  // Fetch colleges + real-time subscription
   useEffect(() => {
     async function fetchColleges() {
       const { data, error } = await supabase.from('colleges').select('*').limit(3)
-      if (error) {
-        console.error('Error fetching colleges:', error)
-        return
-      }
+      if (error) { console.error('Error fetching colleges:', error); return }
       setColleges(data as College[])
     }
     fetchColleges()
+
+    // Real-time: slot count updates instantly for ALL users
+    const channel = supabase
+      .channel('landing-colleges-slots')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'colleges' },
+        (payload) => {
+          setColleges(prev =>
+            prev.map(c => c.id === payload.new.id ? { ...c, ...payload.new } as College : c)
+          )
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
+
+  // Fetch which colleges THIS investor already reserved
+  useEffect(() => {
+    if (!investor) { setReservedCollegeIds(new Set()); return }
+    async function fetchMyWaitlists() {
+      const { data, error } = await supabase
+        .from('waitlists')
+        .select('college_id')
+        .eq('investor_id', investor!.id)
+        .neq('status', 'rejected')
+      if (error) { console.error('Error fetching waitlists:', error); return }
+      setReservedCollegeIds(new Set(data.map((w: any) => w.college_id)))
+    }
+    fetchMyWaitlists()
+  }, [investor])
 
   useEffect(() => {
     if (hash) {
       const id = hash.replace('#', '')
       const element = document.getElementById(id)
       if (element) {
-        // Add a slight delay to ensure content is loaded
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' })
-        }, 100)
+        setTimeout(() => { element.scrollIntoView({ behavior: 'smooth' }) }, 100)
       }
     }
   }, [hash])
 
   const handleReserveClick = (college: College) => {
+    const isFull = college.slots_total - college.slots_taken <= 0
+    const alreadyReserved = reservedCollegeIds.has(college.id)
+    if (isFull || alreadyReserved) return
+
     setSelectedCollege(college)
     if (!investor) {
       setShowAuthModal(true)
@@ -56,6 +87,15 @@ export function LandingPage() {
     setShowReserveModal(true)
   }
 
+  // Update slot count + mark as reserved immediately after success
+  const handleReserveSuccess = (collegeId: string) => {
+    setColleges(prev =>
+      prev.map(c =>
+        c.id === collegeId ? { ...c, slots_taken: c.slots_taken + 1 } : c
+      )
+    )
+    setReservedCollegeIds(prev => new Set([...prev, collegeId]))
+  }
 
   const steps = [
     { title: 'Pick a Location', desc: 'Browse premium high-traffic college campuses and transit hubs.' },
@@ -69,7 +109,6 @@ export function LandingPage() {
 
       {/* Premium Hero Section */}
       <section className="hero-section premium-hero">
-        {/* Decorative mesh */}
         <div className="hero-mesh" aria-hidden="true">
           <div className="hero-orb hero-orb-1" />
           <div className="hero-orb hero-orb-2" />
@@ -77,7 +116,6 @@ export function LandingPage() {
         </div>
 
         <div className="hero-container">
-          {/* Left: Content */}
           <div className="hero-content fade-up" style={{ animationDelay: '0s' }}>
             <div className="hero-badge-premium fade-up" style={{ animationDelay: '0.1s' }}>
               <span className="live-dot" />
@@ -110,7 +148,6 @@ export function LandingPage() {
               </button>
             </div>
 
-            {/* Trust indicators */}
             <div className="hero-trust fade-up" style={{ animationDelay: '0.5s' }}>
               <div className="hero-trust-item">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -126,7 +163,6 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Social Proof */}
             <div className="hero-social-proof fade-up" style={{ animationDelay: '0.6s' }}>
               <div className="avatar-group">
                 <img src="https://i.pravatar.cc/100?img=11" alt="Investor" className="avatar" />
@@ -141,12 +177,9 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Right: Image + Floating Cards */}
           <div className="hero-image-wrap fade-in" style={{ animationDelay: '0.3s' }}>
             <div className="hero-image-bg" />
             <div className="hero-image-gradient" />
-
-            {/* Floating stat card — top left */}
             <div className="hero-floating-card card-1 float-anim">
               <div className="fc-icon">📈</div>
               <div className="fc-text">
@@ -154,8 +187,6 @@ export function LandingPage() {
                 <div className="fc-lbl">Avg. Monthly Earnings</div>
               </div>
             </div>
-
-            {/* Floating stat card — bottom right */}
             <div className="hero-floating-card card-2 float-anim-delayed">
               <div className="fc-icon">⚡</div>
               <div className="fc-text">
@@ -163,8 +194,6 @@ export function LandingPage() {
                 <div className="fc-lbl">Passive — We Handle All</div>
               </div>
             </div>
-
-            {/* Floating ROI card — bottom left */}
             <div className="hero-floating-card card-3 float-anim">
               <div className="fc-icon">🏆</div>
               <div className="fc-text">
@@ -172,16 +201,10 @@ export function LandingPage() {
                 <div className="fc-lbl">Avg. Payback Period</div>
               </div>
             </div>
-
-            <img
-              src={heroImage}
-              alt="Smart Printer Smart Kiosk"
-              className="hero-image"
-            />
+            <img src={heroImage} alt="Smart Printer Smart Kiosk" className="hero-image" />
           </div>
         </div>
       </section>
-
 
       {/* Numbers Section */}
       <section className="numbers-section">
@@ -189,7 +212,6 @@ export function LandingPage() {
           <div className="numbers-header">
             <span className="numbers-label">BY THE NUMBERS</span>
           </div>
-
           <div className="numbers-grid">
             <div className="num-item">
               <div className="num-val">₹30,000</div>
@@ -208,9 +230,7 @@ export function LandingPage() {
               <div className="num-desc">Printers already active across<br />Hyderabad</div>
             </div>
           </div>
-
           <div className="numbers-divider"></div>
-
           <div className="numbers-actions">
             <button
               onClick={() => document.getElementById('locations-preview')?.scrollIntoView({ behavior: 'smooth' })}
@@ -246,12 +266,36 @@ export function LandingPage() {
           <div className="available-grid">
             {colleges.map((s) => {
               const left = s.slots_total - s.slots_taken
+              const pct = Math.round((s.slots_taken / s.slots_total) * 100)
+              const isFull = left <= 0
+              const alreadyReserved = reservedCollegeIds.has(s.id)
+              const isBlocked = isFull || alreadyReserved
+
               return (
                 <div key={s.id} className="av-card">
-                  <div className="av-img-wrap">
+                  <div className="av-img-wrap" style={{ position: 'relative' }}>
                     <div className="av-img-placeholder">{s.name[0]}</div>
                     <span className={`av-badge ${s.tag}`}>{s.tag_label}</span>
+
+                    {/* Overlay for full or already reserved */}
+                    {isBlocked && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: '8px 8px 0 0',
+                      }}>
+                        <span style={{
+                          background: alreadyReserved ? '#1A9B6C' : '#ef4444',
+                          color: '#fff', fontSize: 12, fontWeight: 700,
+                          padding: '4px 12px', borderRadius: 999, letterSpacing: '0.05em'
+                        }}>
+                          {alreadyReserved ? '✓ Already Reserved' : 'Fully Booked'}
+                        </span>
+                      </div>
+                    )}
                   </div>
+
                   <div className="av-card-content" style={{ padding: '1.25rem' }}>
                     <div className="av-name">{s.name}</div>
                     <div className="av-meta" style={{ marginBottom: '1rem' }}>{s.location}</div>
@@ -261,9 +305,28 @@ export function LandingPage() {
                         <div className="av-mini-val">4.5k+</div>
                         <div className="av-mini-lbl">Students</div>
                       </div>
+                      {/* ✅ Live slot count */}
                       <div className="av-mini-stat">
-                        <div className="av-mini-val">{left}</div>
+                        <div
+                          className="av-mini-val"
+                          style={{ color: isFull ? '#ef4444' : left === 1 ? '#f97316' : 'inherit' }}
+                        >
+                          {isFull ? '0' : left}
+                        </div>
                         <div className="av-mini-lbl">Slots left</div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div style={{ margin: '0.75rem 0' }}>
+                      <div className="av-slots-bar-wrap">
+                        <div
+                          className="av-slots-bar"
+                          style={{
+                            width: `${pct}%`,
+                            background: isFull ? '#ef4444' : undefined
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -273,12 +336,22 @@ export function LandingPage() {
                         <div className="av-earn-lbl">Avg earnings /mo</div>
                       </div>
                     </div>
+
+                    {/* ✅ Block cursor when full or already reserved */}
                     <button
                       onClick={() => handleReserveClick(s)}
                       className="av-invest-btn"
-                      style={{ width: '100%', display: 'block', textAlign: 'center' }}
+                      disabled={isBlocked}
+                      style={{
+                        width: '100%',
+                        display: 'block',
+                        textAlign: 'center',
+                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                        opacity: isBlocked ? 0.55 : 1,
+                        background: alreadyReserved ? '#1A9B6C' : isFull ? '#6b7280' : undefined,
+                      }}
                     >
-                      Reserve Now →
+                      {alreadyReserved ? '✓ Reserved' : isFull ? 'Fully Booked' : 'Reserve Now →'}
                     </button>
                   </div>
                 </div>
@@ -336,6 +409,7 @@ export function LandingPage() {
           college={selectedCollege}
           isOpen={showReserveModal}
           onClose={() => setShowReserveModal(false)}
+          onSuccess={handleReserveSuccess}
         />
       )}
 
