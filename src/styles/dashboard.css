@@ -3102,3 +3102,395 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 }
 
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══════════════════════════════════════════════
+   MOBILE KIOSK & TOPBAR FIXES
+   Add at the bottom of your main.css
+   ═══════════════════════════════════════════════ */
+
+/* ── Hamburger button — fixed position, never overlaps title ── */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  width: 38px;
+  height: 38px;
+  z-index: 200;
+  background: var(--sidebar);
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn svg {
+  stroke: #fff;
+  display: block;
+}
+
+/* ── Topbar: push title right so it doesn't hide behind hamburger ── */
+@media (max-width: 1024px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .topbar {
+    padding-left: 60px; /* space for the fixed hamburger */
+  }
+
+  .topbar-left {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .page-title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Hide period toggle on tablet to save space */
+  .topbar-right .toggle-group {
+    display: none;
+  }
+
+  /* Payout badge — shorter text */
+  .payout-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+    white-space: nowrap;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   KIOSK CARDS — Mobile: 1 column, horizontal scroll
+   ═══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Stack cards vertically — 1 per row, full width */
+  .printer-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .pc {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Stats grid inside each card: 2x2 */
+  .pc-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .pc-stat-val {
+    font-size: 14px;
+  }
+
+  .pc-stat-lbl {
+    font-size: 9px;
+  }
+
+  /* Footer row inside card */
+  .pc-footer {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pc-btn {
+    margin-left: auto;
+  }
+
+  /* ── Pending install card: no overflow ── */
+  .install-steps {
+    gap: 8px;
+  }
+
+  .install-step {
+    font-size: 12px;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+  }
+
+  .install-step svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── Available slots grid: 1 column ── */
+  .available-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .av-card {
+    width: 100%;
+  }
+
+  /* ── Section header filter row: stacks ── */
+  .section-header > div:last-child {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Toggle group smaller on mobile */
+  .toggle-btn {
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+
+  /* ── Content padding ── */
+  .content {
+    padding: 0.875rem;
+  }
+
+  /* Section heading */
+  .section-heading {
+    font-size: 15px;
+  }
+
+  .section-heading-sub {
+    font-size: 11px;
+  }
+
+  /* Section divider spacing */
+  .section-divider {
+    margin: 1rem 0 0.75rem;
+  }
+}
+
+/* ── Very small phones ── */
+@media (max-width: 380px) {
+  .topbar {
+    padding-left: 56px;
+    padding-right: 0.5rem;
+  }
+
+  .payout-badge {
+    display: none; /* hide on tiny screens to avoid clutter */
+  }
+
+  .pc-stat-val {
+    font-size: 13px;
+  }
+}
+
+/* KPI row: 2×2 grid so values don't truncate */
+@media (max-width: 640px) {
+  .rpt-kpi-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.625rem;
+  }
+ 
+  .rpt-kpi {
+    padding: 0.875rem;
+  }
+ 
+  .rpt-kpi-val {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+ 
+  .rpt-kpi-lbl {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  
+
+}
+/* ── Reports bottom grid: Tax summary + Download statements ── */
+.reports-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.rpt-tax-total {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 10px;
+  font-weight: 600;
+}
+
+/* Mobile: keep side by side but tighter */
+@media (max-width: 640px) {
+  .reports-bottom-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+  }
+
+  /* Tax summary rows: stack label above value */
+  .rpt-tax-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 6px 0;
+    font-size: 11px;
+  }
+
+  /* Download list: tighten up */
+  .rpt-dl-item {
+    padding: 5px 0;
+    gap: 4px;
+  }
+
+  .rpt-dl-name {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .rpt-dl-meta {
+    font-size: 10px;
+  }
+
+  .rpt-dl-btn {
+    font-size: 10px;
+    padding: 3px 7px;
+    flex-shrink: 0;
+  }
+
+  /* Card padding tighter on mobile */
+  .reports-bottom-grid .rpt-card {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .reports-bottom-grid .rpt-card-title {
+    font-size: 12px;
+  }
+}
+
+/* Very small: stack vertically */
+@media (max-width: 380px) {
+  .reports-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* ═══════════════════════════════════════════════
+   WAITLIST + PROFILE MOBILE LAYOUT FIXES
+   Paste at bottom of main.css
+   ═══════════════════════════════════════════════ */
+
+/* ── WAITLIST: How queue works + Priority Benefits ──
+   Desktop: side by side
+   Mobile: one after another (full width)
+   ─────────────────────────────────────────────── */
+.waitlist-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .waitlist-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .waitlist-info-grid .rpt-card {
+    width: 100%;
+  }
+}
+
+/* ── PROFILE: 2-col desktop, 1-col mobile ──
+   Desktop: Personal + KYC side by side
+            Bank + Notifications side by side
+   Mobile:  Personal → KYC → Bank → Notifications
+            all stacked full width
+   ─────────────────────────────────────────────── */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Bank row: keep label + value on same line, readable */
+  .bank-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 9px 0;
+    font-size: 13px;
+  }
+
+  .bank-row-lbl {
+    font-size: 12px;
+    color: var(--gray);
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+
+  .bank-row-val {
+    font-weight: 500;
+    color: var(--ink);
+    text-align: right;
+    flex: 1;
+    word-break: break-all;
+  }
+
+  /* Notification row: keep toggle on right */
+  .notif-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .notif-label {
+    font-size: 13px;
+  }
+
+  .notif-sub {
+    font-size: 11px;
+    color: var(--gray);
+  }
+
+  /* Prof fields: label above value */
+  .prof-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 9px 0;
+  }
+
+  .prof-field-lbl {
+    width: auto;
+    font-size: 10px;
+  }
+
+  .prof-field-val,
+  .prof-field-input {
+    font-size: 13px;
+    width: 100%;
+  }
+
+  /* KYC doc name */
+  .kyc-doc-name {
+    font-size: 12px;
+  }
+
+  /* Danger buttons full width */
+  .danger-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -32,13 +32,28 @@ export function ReportsPage() {
     <>
       <Topbar title="Reports" />
       <div className="page-view content">
+
+        {/* KPI row — 2×2 on mobile */}
         <div className="rpt-kpi-row">
-          <div className="rpt-kpi"><div className="rpt-kpi-val">₹1,24,560</div><div className="rpt-kpi-lbl">Total revenue (YTD)</div></div>
-          <div className="rpt-kpi"><div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>₹56,840</div><div className="rpt-kpi-lbl">Your profit (YTD)</div></div>
-          <div className="rpt-kpi"><div className="rpt-kpi-val">₹41,800</div><div className="rpt-kpi-lbl">Total invested recovered</div></div>
-          <div className="rpt-kpi"><div className="rpt-kpi-val">18,420</div><div className="rpt-kpi-lbl">Total print jobs (YTD)</div></div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">₹1,24,560</div>
+            <div className="rpt-kpi-lbl">Total revenue (YTD)</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>₹56,840</div>
+            <div className="rpt-kpi-lbl">Your profit (YTD)</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">₹41,800</div>
+            <div className="rpt-kpi-lbl">Total invested recovered</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">18,420</div>
+            <div className="rpt-kpi-lbl">Total print jobs (YTD)</div>
+          </div>
         </div>
 
+        {/* P&L table */}
         <div className="rpt-card">
           <div className="rpt-card-header">
             <div>
@@ -49,7 +64,12 @@ export function ReportsPage() {
           </div>
           <div className="rpt-table-wrap">
             <table className="rpt-table">
-              <thead><tr><th>Month</th><th>Revenue</th><th>Var. Expenses</th><th>Fixed Expenses</th><th>Net Profit</th><th>Your Share (70%)</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Month</th><th>Revenue</th><th>Var. Expenses</th>
+                  <th>Fixed Expenses</th><th>Net Profit</th><th>Your Share (70%)</th>
+                </tr>
+              </thead>
               <tbody>
                 {reportMonths.map((r) => {
                   const profit = r.rev - r.var_ - r.fix_
@@ -80,18 +100,32 @@ export function ReportsPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        {/* ✅ Use className instead of inline style so CSS can control it on mobile */}
+        <div className="reports-bottom-grid">
+
+          {/* Tax summary */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '.75rem' }}>
               <div className="rpt-card-title">Tax summary FY 2025–26</div>
             </div>
-            <div className="rpt-tax-row"><span>Gross revenue received</span><span>₹1,24,560</span></div>
-            <div className="rpt-tax-row"><span>Expenses deducted by Smart Printer</span><span style={{ color: 'var(--red)' }}>− ₹67,720</span></div>
-            <div className="rpt-tax-row" style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 10, fontWeight: 600 }}>
-              <span>Net taxable income (est.)</span><span style={{ color: 'var(--green)' }}>₹56,840</span>
+            <div className="rpt-tax-row">
+              <span>Gross revenue received</span>
+              <span>₹1,24,560</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>Consult your CA for exact TDS/IT filing guidance. This is an estimate only.</div>
+            <div className="rpt-tax-row">
+              <span>Expenses deducted by Smart Printer</span>
+              <span style={{ color: 'var(--red)' }}>− ₹67,720</span>
+            </div>
+            <div className="rpt-tax-row rpt-tax-total">
+              <span>Net taxable income (est.)</span>
+              <span style={{ color: 'var(--green)' }}>₹56,840</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem', lineHeight: 1.5 }}>
+              Consult your CA for exact TDS/IT filing guidance. This is an estimate only.
+            </div>
           </div>
+
+          {/* Download statements */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '.75rem' }}>
               <div className="rpt-card-title">Download statements</div>
@@ -106,6 +140,7 @@ export function ReportsPage() {
               </div>
             ))}
           </div>
+
         </div>
       </div>
     </>
