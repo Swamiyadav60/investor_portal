@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+
 import clsx from 'clsx'
 
 interface NavItem {
@@ -7,6 +9,7 @@ interface NavItem {
   label: string
   icon: React.ReactNode
 }
+
 
 const investorNav: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -32,6 +35,7 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
   const { investor, isAdmin, signOut } = useAuth()
   const navigate = useNavigate()
   const nav = admin ? adminNav : investorNav
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     await signOut()
@@ -45,7 +49,21 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
       : 'Investor'
 
   return (
-    <aside className="sidebar">
+    <>
+    <button
+  className="mobile-menu-btn"
+  onClick={() => setMenuOpen(!menuOpen)}
+>
+  ☰
+</button>
+{menuOpen && (
+  <div
+    className="sidebar-overlay"
+    onClick={() => setMenuOpen(false)}
+  />
+)}
+    <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      
       <Link to="/" className="sidebar-logo">
         <div className="sidebar-logo-dot" />
         <div>
@@ -59,6 +77,7 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={() => setMenuOpen(false)}
             className={({ isActive }) => clsx('nav-item', isActive && 'active')}
           >
             {item.icon}
@@ -66,12 +85,12 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
           </NavLink>
         ))}
         {admin ? (
-          <NavLink to="/dashboard" className="nav-item" style={{ marginTop: '1rem' }}>
+          <NavLink to="/dashboard" className="nav-item" style={{ marginTop: '1rem' }} onClick={() => setMenuOpen(false)}>
             <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Investor View
           </NavLink>
         ) : isAdmin ? (
-          <NavLink to="/admin/colleges" className="nav-item" style={{ marginTop: '1rem' }}>
+          <NavLink to="/admin/colleges" className="nav-item" style={{ marginTop: '1rem' }} onClick={() => setMenuOpen(false)}>
             <svg viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
             Admin Dashboard
           </NavLink>
@@ -91,5 +110,6 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
         </button>
       </div>
     </aside>
+    </>
   )
 }
