@@ -92,7 +92,7 @@ export function LandingPage() {
 
             <p className="hero-subtitle fade-up" style={{ animationDelay: '0.3s' }}>
               Invest in automated Smart Printer kiosks across premium college campuses.
-              <strong> ₹30,000 one-time</strong>, earn <strong>₹3,500+/month</strong> passive income — fully managed by us.
+              <strong> ₹30,000 one-time</strong>, earn good passive income — fully managed by us.
             </p>
 
             <div className="hero-btns fade-up" style={{ animationDelay: '0.4s' }}>
@@ -149,15 +149,6 @@ export function LandingPage() {
             {/* Floating stat card — top left */}
             <div className="hero-floating-card card-1 float-anim">
               <div className="fc-icon">📈</div>
-              <div className="fc-text">
-                <div className="fc-val">₹3,500+</div>
-                <div className="fc-lbl">Avg. Monthly Earnings</div>
-              </div>
-            </div>
-
-            {/* Floating stat card — bottom right */}
-            <div className="hero-floating-card card-2 float-anim-delayed">
-              <div className="fc-icon">⚡</div>
               <div className="fc-text">
                 <div className="fc-val">100%</div>
                 <div className="fc-lbl">Passive — We Handle All</div>
