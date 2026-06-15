@@ -1,5 +1,7 @@
 import { ToggleGroup } from '@/components/ui/ToggleGroup'
-import { DEMO_KIOSKS } from '@/data/demo'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface TopbarProps {
   title: string
@@ -12,8 +14,40 @@ interface TopbarProps {
 }
 
 export function Topbar({
+  
   title, showFilters, kioskId, onKioskChange, period, onPeriodChange, nextPayout = 'Jul 1',
 }: TopbarProps) {
+ 
+const { investor } = useAuth()
+const { data: kiosks = [] } = useQuery({
+  queryKey: ['investor-kiosks', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data: assignments, error: assignmentError } =
+      await supabase
+        .from('investor_kiosks')
+        .select('kiosk_id')
+        .eq('investor_id', investor!.id)
+        .eq('status', 'active')
+
+    if (assignmentError) throw assignmentError
+
+    const kioskIds =
+      assignments?.map(a => a.kiosk_id) || []
+
+    if (!kioskIds.length) return []
+
+    const { data: kiosks, error: kioskError } =
+      await supabase
+        .from('kiosks')
+        .select('id,name,location,status')
+        .in('id', kioskIds)
+
+    if (kioskError) throw kioskError
+
+    return kiosks || []
+  }
+})
   return (
     <div className="topbar">
       <div className="topbar-left">
@@ -26,9 +60,13 @@ export function Topbar({
               onChange={(e) => onKioskChange?.(e.target.value)}
             >
               <option value="all">All kiosks</option>
-              {DEMO_KIOSKS.filter((k) => k.status === 'active').map((k) => (
-                <option key={k.id} value={k.id}>{k.name} — {k.location}</option>
-              ))}
+              {kiosks
+  .filter((k) => k.status === 'active')
+  .map((k) => (
+    <option key={k.id} value={k.id}>
+      {k.name} — {k.location}
+    </option>
+  ))}
             </select>
             <svg className="dropdown-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 6l4 4 4-4" />

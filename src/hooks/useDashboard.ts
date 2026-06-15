@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { PRINTER_DATA } from '@/data/demo'
@@ -39,10 +38,14 @@ function computeDemoStats(kioskId: string, period: 'monthly' | 'weekly'): Dashbo
   const avg3 = last3.reduce((a, b) => a + b, 0) / 3
   const prev3avg = [len - 2, len - 3, len - 4].map((i) => series.revenue[i] - series.varExp[i] - series.fixExp[i]).reduce((a, b) => a + b, 0) / 3
   const avg3Delta = ((avg3 - prev3avg) / Math.abs(prev3avg)) * 100
+  const profitShare = 70 
+  
 
   return {
     revenue: rev, expenses: exp, variableExpenses: var_, fixedExpenses: fix_,
-    netProfit: profit, investorProfit: profit * 0.7,
+    netProfit: profit, 
+    
+    investorProfit:profit * (profitShare / 100),
     revenueDelta: revDelta, profitDelta, avg3Profit: avg3, avg3Delta,
     jobs: series.jobs[cur], jobsPrev: series.jobs[prev],
     occupancy: parseFloat(d.occ), investment: d.investment, recovered: d.recovered,
@@ -66,28 +69,133 @@ async function fetchLiveStats(kioskId: string, period: string): Promise<Dashboar
   }
 
   const [{ data: revenues }, { data: expenses }] = await Promise.all([revQuery, expQuery])
-
   const revenue = revenues?.reduce((s, r) => s + Number(r.amount), 0) || 0
   const variableExpenses = expenses?.filter((e) => e.expense_type === 'variable').reduce((s, e) => s + Number(e.amount), 0) || 0
   const fixedExpenses = expenses?.filter((e) => e.expense_type === 'fixed').reduce((s, e) => s + Number(e.amount), 0) || 0
-  const jobs = revenues?.reduce((s, r) => s + (r.print_jobs || 0), 0) || 0
+  
   const netProfit = revenue - variableExpenses - fixedExpenses
+ const { data: kiosks } = await supabase
+  .from('kiosks')
+  .select(`
+    investment_amount,
+    recovered_amount,
+    occupancy_rate,
+    jobs_this_month
+  `)
 
+const investment =
+  kiosks?.reduce(
+    (sum, k) => sum + Number(k.investment_amount || 0),
+    0
+  ) || 0
+
+const recovered =
+  kiosks?.reduce(
+    (sum, k) => sum + Number(k.recovered_amount || 0),
+    0
+  ) || 0
+
+const occupancy =
+  kiosks?.length
+    ? kiosks.reduce(
+        (sum, k) => sum + Number(k.occupancy_rate || 0),
+        0
+      ) / kiosks.length
+    : 0
+
+const kioskJobs =
+  kiosks?.reduce(
+    (sum, k) => sum + Number(k.jobs_this_month || 0),
+    0
+  ) || 0
   return {
     revenue, expenses: variableExpenses + fixedExpenses, variableExpenses, fixedExpenses,
     netProfit, investorProfit: netProfit * 0.7,
     revenueDelta: 0, profitDelta: 0, avg3Profit: netProfit, avg3Delta: 0,
-    jobs, jobsPrev: 0, occupancy: 75, investment: 75000, recovered: 41800,
+    jobs: kioskJobs, jobsPrev: 0, occupancy, investment, recovered,
   }
 }
 
-export function useChartData(kioskId: string, interval: 'monthly' | 'weekly', metric: 'revenue' | 'profit') {
-  return useMemo(() => {
-    const d = PRINTER_DATA[kioskId] || PRINTER_DATA.all
-    const series = interval === 'monthly' ? d.monthly : d.weekly
-    const values = metric === 'revenue'
-      ? series.revenue
-      : series.revenue.map((r, i) => r - series.varExp[i] - series.fixExp[i])
-    return { values, label: d.label }
-  }, [kioskId, interval, metric])
+
+export function useChartData(
+  kioskId: string,
+  interval: 'monthly' | 'weekly',
+  metric: 'revenue' | 'profit'
+) {
+  return useQuery({
+    queryKey: ['chart-data', kioskId, interval, metric],
+    queryFn: async () => {
+
+      let revenueQuery = supabase
+        .from('revenues')
+        .select('amount, period_start, kiosk_id')
+        .order('period_start')
+
+      let expenseQuery = supabase
+        .from('expenses')
+        .select('amount, expense_type, period_start, kiosk_id')
+
+      if (kioskId !== 'all') {
+        revenueQuery = revenueQuery.eq('kiosk_id', kioskId)
+        expenseQuery = expenseQuery.eq('kiosk_id', kioskId)
+      }
+
+      const [
+        { data: revenues },
+        { data: expenses }
+      ] = await Promise.all([
+        revenueQuery,
+        expenseQuery
+      ])
+
+      const monthValues = new Array(12).fill(0)
+
+;(revenues || []).forEach((r) => {
+  const monthIndex = new Date(r.period_start).getMonth()
+
+  if (metric === 'revenue') {
+    monthValues[monthIndex] = Number(r.amount)
+  } else {
+    const matchingExpenses =
+      expenses?.filter(
+        e => e.period_start === r.period_start
+      ) || []
+
+    const expenseTotal =
+      matchingExpenses.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0
+      )
+
+    monthValues[monthIndex] =
+      Number(r.amount) - expenseTotal
+  }
+})
+
+const values = monthValues
+            const labels = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+]
+
+      return {
+        values,
+        labels,
+        label:
+          metric === 'revenue'
+            ? 'Revenue'
+            : 'Profit'
+      }
+    }
+  })
 }

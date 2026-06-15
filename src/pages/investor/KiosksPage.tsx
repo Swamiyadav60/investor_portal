@@ -2,23 +2,89 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { ToggleGroup } from '@/components/ui/ToggleGroup'
-import { DEMO_KIOSKS, DEMO_COLLEGES } from '@/data/demo'
 import { fmt } from '@/lib/format'
 import { initiatePayment } from '@/lib/razorpay'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 
 export function KiosksPage() {
   const [slotFilter, setSlotFilter] = useState('all')
   const navigate = useNavigate()
   const { investor } = useAuth()
+  const { data: activeKiosks = [] } = useQuery({
+  queryKey: ['my-kiosks', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data: assignments, error } = await supabase
+      .from('investor_kiosks')
+      .select('kiosk_id')
+      .eq('investor_id', investor!.id)
+      .eq('status', 'active')
+
+    if (error) throw error
+
+    const kioskIds =
+      assignments?.map(a => a.kiosk_id) || []
+
+    if (!kioskIds.length) return []
+
+    const { data: kiosks, error: kioskError } = await supabase
+      .from('kiosks')
+      .select('*')
+      .in('id', kioskIds)
+
+    if (kioskError) throw kioskError
+
+    return kiosks || []
+  }
+})
   const { toast } = useToast()
 
-  const activeKiosks = DEMO_KIOSKS.filter((k) => k.status === 'active')
-  const pendingKiosks = DEMO_KIOSKS.filter((k) => k.status === 'pending')
-  const filtered = slotFilter === 'all' ? DEMO_COLLEGES : DEMO_COLLEGES.filter((s) => s.type === slotFilter)
+  
+  const { data: pendingKiosks = [] } = useQuery({
+  queryKey: ['pending-kiosks', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data: assignments } = await supabase
+      .from('investor_kiosks')
+      .select('kiosk_id')
+      .eq('investor_id', investor!.id)
 
-  const handleInvest = async (college: typeof DEMO_COLLEGES[0]) => {
+    const kioskIds =
+      assignments?.map(a => a.kiosk_id) || []
+
+    if (!kioskIds.length) return []
+
+    const { data } = await supabase
+      .from('kiosks')
+      .select('*')
+      .in('id', kioskIds)
+      .eq('status', 'pending')
+
+    return data || []
+  }
+})
+const { data: colleges = [] } = useQuery({
+  queryKey: ['colleges'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('colleges')
+      .select('*')
+      .eq('is_active', true)
+
+    if (error) throw error
+
+    return data || []
+  }
+})
+  const filtered =
+  slotFilter === 'all'
+    ? colleges
+    : colleges.filter((s) => s.type === slotFilter)
+
+  const handleInvest = async (college: any) => {
     try {
       await initiatePayment({
         amount: college.investment_amount,
@@ -114,7 +180,7 @@ export function KiosksPage() {
                 {k.location}
               </div>
               <div className="install-steps">
-                {k.install_steps.map((s, i) => (
+                {(k.install_steps as any[] || []).map((s: any, i: number) => (
                   <div key={i} className={`install-step ${s.done ? 'done' : s.active ? 'active' : 'waiting'}`}>
                     {s.done ? (
                       <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>

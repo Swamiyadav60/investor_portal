@@ -16,7 +16,15 @@ export function DashboardPage() {
   const { investor } = useAuth()
 
   const { data: stats } = useDashboardData(kioskId, period)
-  const { values, label } = useChartData(kioskId, graphInterval, graphMetric)
+  const {
+  data: chartData
+} = useChartData(
+  kioskId,
+  graphInterval,
+  graphMetric
+)
+
+
   const printerData = PRINTER_DATA[kioskId] || PRINTER_DATA.all
   const series = period === 'monthly' ? printerData.monthly : printerData.weekly
   const jobs = series.jobs
@@ -51,13 +59,14 @@ export function DashboardPage() {
 
         {/* Performance Chart */}
         <PerformanceChart
-          values={values}
-          label={label}
-          metric={graphMetric}
-          interval={graphInterval}
-          onMetricChange={setGraphMetric}
-          onIntervalChange={setGraphInterval}
-        />
+  values={chartData?.values || []}
+  labels={chartData?.labels || []}
+  label={chartData?.label || ''}
+  metric={graphMetric}
+  interval={graphInterval}
+  onMetricChange={setGraphMetric}
+  onIntervalChange={setGraphInterval}
+/>
 
         {/* Stats row */}
         <div className="stats-row">

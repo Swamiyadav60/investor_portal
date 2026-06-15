@@ -5,14 +5,15 @@ import {
 } from 'chart.js'
 import { ToggleGroup } from '@/components/ui/ToggleGroup'
 import { fmtK } from '@/lib/format'
-import { MONTHS } from '@/lib/format'
+
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
-const WEEKS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8']
+
 
 interface PerformanceChartProps {
   values: number[]
+  labels: string[]
   label: string
   metric: 'revenue' | 'profit'
   interval: 'monthly' | 'weekly'
@@ -21,17 +22,22 @@ interface PerformanceChartProps {
 }
 
 export function PerformanceChart({
-  values, label, metric, interval, onMetricChange, onIntervalChange,
+  values, label,labels, metric, interval, onMetricChange, onIntervalChange,
 }: PerformanceChartProps) {
   const chartData = useMemo(() => {
     const color = metric === 'profit' ? '#1A9B6C' : '#1A1A18'
     const colorAlpha = metric === 'profit' ? 'rgba(26,155,108,0.12)' : 'rgba(26,26,24,0.07)'
     return {
-      labels: interval === 'monthly' ? MONTHS : WEEKS,
+      labels,
       datasets: [{
         data: values,
-        backgroundColor: values.map((_, i) => i === values.length - 1 ? color : colorAlpha),
-        borderColor: values.map((_, i) => i === values.length - 1 ? color : 'transparent'),
+       backgroundColor: (values || []).map(v =>
+  v > 0 ? color : colorAlpha
+),
+
+borderColor: (values || []).map(v =>
+  v > 0 ? color : 'transparent'
+),
         borderWidth: 0,
         borderRadius: 5,
         borderSkipped: false,
