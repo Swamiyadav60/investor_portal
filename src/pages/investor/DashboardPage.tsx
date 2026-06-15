@@ -35,9 +35,11 @@ export function DashboardPage() {
         onPeriodChange={setPeriod}
       />
       <div className="page-view content">
+        {/* KPI Cards */}
         <KPICards stats={stats} period={period} profitShare={investor?.profit_share} />
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        {/* Expense + ROI row */}
+        <div className="dash-middle-row">
           <ExpenseBreakdown
             variableTotal={stats.variableExpenses}
             fixedTotal={stats.fixedExpenses}
@@ -47,6 +49,7 @@ export function DashboardPage() {
           <ROIProgress investment={stats.investment} recovered={stats.recovered} />
         </div>
 
+        {/* Performance Chart */}
         <PerformanceChart
           values={values}
           label={label}
@@ -56,6 +59,7 @@ export function DashboardPage() {
           onIntervalChange={setGraphInterval}
         />
 
+        {/* Stats row */}
         <div className="stats-row">
           <div className="stat-card">
             <div className="stat-label">Total print jobs</div>

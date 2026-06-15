@@ -23,7 +23,8 @@ export function KPICards({ stats, period, profitShare = 70 }: KPICardsProps) {
         </div>
         <div className="kpi-value">{fmt(stats.revenue)}</div>
         <div className={`kpi-delta ${stats.revenueDelta >= 0 ? 'delta-up' : 'delta-down'}`}>
-          {stats.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.revenueDelta).toFixed(1)}% <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
+          {stats.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.revenueDelta).toFixed(1)}%{' '}
+          <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
         </div>
       </div>
 
@@ -34,8 +35,8 @@ export function KPICards({ stats, period, profitShare = 70 }: KPICardsProps) {
           Total expenses
         </div>
         <div className="kpi-value">{fmt(stats.expenses)}</div>
-        <div className="kpi-delta delta-neutral">
-          Variable {fmt(stats.variableExpenses)} · Fixed {fmt(stats.fixedExpenses)}
+        <div className="kpi-delta delta-neutral" style={{ fontSize: 10 }}>
+          Var {fmt(stats.variableExpenses)} · Fix {fmt(stats.fixedExpenses)}
         </div>
       </div>
 
@@ -47,7 +48,8 @@ export function KPICards({ stats, period, profitShare = 70 }: KPICardsProps) {
         </div>
         <div className="kpi-value" style={{ color: healthColor }}>{fmt(stats.netProfit)}</div>
         <div className={`kpi-delta ${stats.profitDelta >= 0 ? 'delta-up' : 'delta-down'}`}>
-          {stats.profitDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.profitDelta).toFixed(1)}% <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
+          {stats.profitDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.profitDelta).toFixed(1)}%{' '}
+          <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
         </div>
         <div className="avg-strip">
           <span className="avg-label">3-mo avg:</span>
@@ -62,11 +64,15 @@ export function KPICards({ stats, period, profitShare = 70 }: KPICardsProps) {
         <div className="kpi-accent" style={{ background: 'var(--green)' }} />
         <div className="kpi-label" style={{ color: 'var(--green-d)' }}>
           <svg viewBox="0 0 24 24" style={{ stroke: 'var(--green)' }}><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
-          Your profit <span style={{ background: 'var(--green-l)', color: 'var(--green-d)', fontSize: 10, padding: '1px 6px', borderRadius: 999, marginLeft: 4, fontWeight: 600, letterSpacing: '.04em' }}>{profitShare}%</span>
+          Your profit{' '}
+          <span style={{ background: 'var(--green-l)', color: 'var(--green-d)', fontSize: 10, padding: '1px 6px', borderRadius: 999, marginLeft: 4, fontWeight: 600 }}>
+            {profitShare}%
+          </span>
         </div>
         <div className="kpi-value" style={{ color: 'var(--green)' }}>{fmt(stats.investorProfit)}</div>
         <div className={`kpi-delta ${stats.profitDelta >= 0 ? 'delta-up' : 'delta-down'}`}>
-          {stats.profitDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.profitDelta).toFixed(1)}% <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
+          {stats.profitDelta >= 0 ? '▲' : '▼'} {Math.abs(stats.profitDelta).toFixed(1)}%{' '}
+          <span style={{ color: 'var(--gray)' }}>{periodLabel}</span>
         </div>
         <div className="avg-strip">
           <span className="avg-label">3-mo avg:</span>

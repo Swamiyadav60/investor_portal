@@ -30,19 +30,19 @@ function ExpenseItems({ items, total }: { items: ExpenseBreakdownType[]; total: 
 
 export function ExpenseBreakdown({ variableTotal, fixedTotal, varBreakdown, fixBreakdown }: ExpenseBreakdownProps) {
   return (
-    <>
-      <div className="expense-card" style={{ flex: 1 }}>
+    <div className="expense-cards-wrap">
+      <div className="expense-card">
         <div className="expense-card-title">
           Variable expenses<span className="expense-card-total">{fmt(variableTotal)}</span>
         </div>
         <ExpenseItems items={varBreakdown} total={variableTotal} />
       </div>
-      <div className="expense-card" style={{ flex: 1 }}>
+      <div className="expense-card">
         <div className="expense-card-title">
           Fixed expenses<span className="expense-card-total">{fmt(fixedTotal)}</span>
         </div>
         <ExpenseItems items={fixBreakdown} total={fixedTotal} />
       </div>
-    </>
+    </div>
   )
 }

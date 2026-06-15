@@ -33,17 +33,17 @@ export function ProfilePage() {
     gst: investor?.gst || 'Not added',
   })
   const [prefs, setPrefs] = useState<NotificationPrefs>(
-    investor?.notification_prefs || { job_alerts: false, daily_summary: true, monthly_payout: true, maintenance_alerts: true, new_slots: false }
+    investor?.notification_prefs || {
+      job_alerts: false, daily_summary: true,
+      monthly_payout: true, maintenance_alerts: true, new_slots: false,
+    }
   )
 
   const handleSave = async () => {
     if (isSupabaseConfigured && investor) {
       await supabase.from('investors').update({
-        full_name: form.full_name,
-        phone: form.phone,
-        city: form.city,
-        pan: form.pan,
-        gst: form.gst,
+        full_name: form.full_name, phone: form.phone,
+        city: form.city, pan: form.pan, gst: form.gst,
         notification_prefs: prefs,
       }).eq('id', investor.id)
       await refreshInvestor()
@@ -65,13 +65,24 @@ export function ProfilePage() {
     <>
       <Topbar title="Profile" />
       <div className="page-view content">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+
+        {/*
+          Desktop: 2-column grid
+            Row 1 → Personal info | KYC & docs
+            Row 2 → Bank details  | Notifications
+          Mobile: 1-column
+            Personal info → KYC → Bank → Notifications
+        */}
+        <div className="profile-grid">
+
+          {/* 1. Personal information */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Personal information</div>
               <button className="rpt-export-btn" onClick={() => setEditing(!editing)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
                 Edit
               </button>
@@ -98,9 +109,12 @@ export function ProfilePage() {
                 )}
               </div>
             ))}
-            {editing && <button className="prof-save-btn" onClick={handleSave}>Save changes</button>}
+            {editing && (
+              <button className="prof-save-btn" onClick={handleSave}>Save changes</button>
+            )}
           </div>
 
+          {/* 2. KYC & documents */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">KYC & documents</div>
@@ -111,14 +125,20 @@ export function ProfilePage() {
             {KYC_DOCS.map((d) => (
               <div key={d.name} className="kyc-doc-item">
                 <div className="kyc-doc-icon">
-                  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
                 </div>
                 <div className="kyc-doc-name">{d.name}</div>
-                <span className={`kyc-doc-status ${d.status}`}>{d.status === 'ok' ? '✓ Verified' : 'Pending'}</span>
+                <span className={`kyc-doc-status ${d.status}`}>
+                  {d.status === 'ok' ? '✓ Verified' : 'Pending'}
+                </span>
               </div>
             ))}
           </div>
 
+          {/* 3. Payout bank details */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Payout bank details</div>
@@ -137,6 +157,7 @@ export function ProfilePage() {
             ))}
           </div>
 
+          {/* 4. Notification preferences */}
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Notification preferences</div>
@@ -158,16 +179,27 @@ export function ProfilePage() {
               </div>
             ))}
           </div>
+
         </div>
 
+        {/* Account actions — always full width */}
         <div className="rpt-card" style={{ borderColor: '#FBBABA' }}>
-          <div className="rpt-card-title" style={{ color: 'var(--red)', marginBottom: '.75rem' }}>Account actions</div>
-          <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
-            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>Request slot transfer</button>
-            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>Close investor account</button>
+          <div className="rpt-card-title" style={{ color: 'var(--red)', marginBottom: '.75rem' }}>
+            Account actions
           </div>
-          <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>These actions require verification and are processed by the Smart Printer support team.</div>
+          <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>
+              Request slot transfer
+            </button>
+            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>
+              Close investor account
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>
+            These actions require verification and are processed by the Smart Printer support team.
+          </div>
         </div>
+
       </div>
     </>
   )

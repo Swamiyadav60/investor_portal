@@ -10,7 +10,7 @@ export function ROIProgress({ investment, recovered }: ROIProgressProps) {
   const remaining = Math.max(0, investment - recovered)
 
   return (
-    <div className="progress-card" style={{ minWidth: 200, maxWidth: 220 }}>
+    <div className="progress-card">
       <div className="progress-header">
         <div>
           <div className="progress-title">ROI progress</div>
@@ -26,7 +26,9 @@ export function ROIProgress({ investment, recovered }: ROIProgressProps) {
         <span>{fmt(investment)}</span>
       </div>
       <div style={{ marginTop: 10, fontSize: 11, color: 'var(--gray)' }}>
-        {pct >= 100 ? '🎉 Fully recovered — pure profit now!' : `${fmt(remaining)} remaining to full ROI`}
+        {pct >= 100
+          ? '🎉 Fully recovered — pure profit now!'
+          : `${fmt(remaining)} remaining to full ROI`}
       </div>
     </div>
   )
