@@ -12,7 +12,10 @@ export function AdminAnalyticsPage() {
   const [graphMetric, setGraphMetric] = useState<'revenue' | 'profit'>('revenue')
   const [graphInterval, setGraphInterval] = useState<'monthly' | 'weekly'>('monthly')
   const { data: stats } = useDashboardData('all', 'monthly')
-  const { values, label } = useChartData('all', graphInterval, graphMetric)
+  const { data: chartData } = useChartData('all', graphInterval, graphMetric)
+  const values = chartData?.values || []
+  const labels = chartData?.labels || []
+  const label = chartData?.label || ''
 
   const { data: adminKpis, isLoading: isLoadingKpis } = useQuery({
     queryKey: ['admin-kpis'],
@@ -41,6 +44,7 @@ export function AdminAnalyticsPage() {
 
         <PerformanceChart
           values={values}
+          labels={labels}
           label={label}
           metric={graphMetric}
           interval={graphInterval}
