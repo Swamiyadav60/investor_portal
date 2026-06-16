@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 
 export function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { user, investor, loading, isDemo } = useAuth()
+  const { user, investor, loading, isDemo, isAmbassador } = useAuth()
 
   if (loading) {
     return (
@@ -16,6 +16,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = (isSupabaseConfigured && user) || isDemo || investor
 
   if (isAuthenticated) {
+    if (isAmbassador) return <Navigate to="/ambassador/dashboard" replace />
     return <Navigate to="/dashboard" replace />
   }
 

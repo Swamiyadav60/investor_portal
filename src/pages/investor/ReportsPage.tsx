@@ -47,6 +47,7 @@ const { data } = useQuery({
         .from('expenses')
         .select('*')
         .in('kiosk_id', kioskIds)
+        .eq('status', 'approved')
     ])
     
 

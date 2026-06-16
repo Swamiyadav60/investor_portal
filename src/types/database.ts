@@ -1,4 +1,4 @@
-export type UserRole = 'investor' | 'admin'
+export type UserRole = 'investor' | 'branch_ambassador' | 'admin'
 export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance'
 export type ExpenseType = 'variable' | 'fixed'
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled'
@@ -33,6 +33,7 @@ export interface Investor {
   pan: string | null
   gst: string | null
   role: UserRole
+  assigned_college_id: string | null
   profit_share: number
   kyc_status: KycStatus
   bank_name: string | null
@@ -79,6 +80,7 @@ export interface Kiosk {
   install_eta: string | null
   installed_at: string | null
   is_online: boolean
+  branch_ambassador_id?: string | null
   created_at: string
   updated_at: string
   college?: College
@@ -124,6 +126,11 @@ export interface Expense {
   period_end: string
   period_type: string
   notes: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  admin_remarks: string | null
+  bill_url: string | null
+  approved_by: string | null
+  approved_at: string | null
   created_by: string | null
   created_at: string
   kiosk?: Kiosk
@@ -208,4 +215,3 @@ export interface ExpenseBreakdown {
   color: string
   pct: number
 }
-

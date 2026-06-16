@@ -873,6 +873,45 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .auth-link{font-size:12px;color:var(--green);cursor:pointer;text-decoration:none}
 .auth-link:hover{text-decoration:underline}
 
+/* Role Selector */
+.role-selector-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.role-selector {
+  display: flex;
+  background: var(--gray-l);
+  padding: 4px;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-btn.active {
+  background: var(--white);
+  color: var(--green);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.role-btn:not(.active):hover {
+  color: var(--ink);
+}
+
 /* Admin */
 .admin-table{width:100%;border-collapse:collapse;font-size:13px}
 .admin-table th{font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
@@ -901,6 +940,41 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
   background: var(--gray-l);
   color: var(--gray);
 }
+
+/* Expense / Submission Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.status-badge::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-badge.pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.status-badge.pending::before { background: #ea580c; }
+.status-badge.approved {
+  background: var(--green-l);
+  color: var(--green-d);
+}
+.status-badge.approved::before { background: #10b981; }
+.status-badge.rejected {
+  background: var(--red-l);
+  color: var(--red);
+}
+.status-badge.rejected::before { background: #ef4444; }
 
 .stat-card:nth-child(4) {
   grid-column: span 2;

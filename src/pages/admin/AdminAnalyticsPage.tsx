@@ -13,9 +13,6 @@ export function AdminAnalyticsPage() {
   const [graphInterval, setGraphInterval] = useState<'monthly' | 'weekly'>('monthly')
   const { data: stats } = useDashboardData('all', 'monthly')
   const { data: chartData } = useChartData('all', graphInterval, graphMetric)
-  const values = chartData?.values || []
-  const labels = chartData?.labels || []
-  const label = chartData?.label || ''
 
   const { data: adminKpis, isLoading: isLoadingKpis } = useQuery({
     queryKey: ['admin-kpis'],
@@ -43,9 +40,9 @@ export function AdminAnalyticsPage() {
         <KPICards stats={stats} period="monthly" />
 
         <PerformanceChart
-          values={values}
-          labels={labels}
-          label={label}
+          values={chartData?.values || []}
+          labels={chartData?.labels || []}
+          label={chartData?.label || ''}
           metric={graphMetric}
           interval={graphInterval}
           onMetricChange={setGraphMetric}

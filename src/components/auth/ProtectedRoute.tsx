@@ -1,9 +1,18 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
+import type { UserRole } from '@/types/database'
 
-export function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
-  const { user, investor, loading, isDemo } = useAuth()
+export function ProtectedRoute({ 
+  children, 
+  adminOnly = false,
+  allowedRoles
+}: { 
+  children: React.ReactNode; 
+  adminOnly?: boolean;
+  allowedRoles?: UserRole[]
+}) {
+  const { user, investor, loading, isDemo, isAdmin, isAmbassador, isInvestor } = useAuth()
 
   if (loading) {
     return (
@@ -29,8 +38,19 @@ export function ProtectedRoute({ children, adminOnly = false }: { children: Reac
     )
   }
 
-  if (adminOnly && investor?.role !== 'admin') {
+  // Admin always has access to everything
+  if (isAdmin) return <>{children}</>
+
+  if (adminOnly && !isAdmin) {
+    // If they were trying to access admin, send them to their dashboard
+    if (isAmbassador) return <Navigate to="/branch/dashboard" replace />
     return <Navigate to="/dashboard" replace />
+  }
+
+  if (allowedRoles && investor && !allowedRoles.includes(investor.role)) {
+    if (isAmbassador) return <Navigate to="/branch/dashboard" replace />
+    if (isInvestor) return <Navigate to="/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

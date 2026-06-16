@@ -61,7 +61,7 @@ async function fetchLiveStats(kioskId: string, period: string): Promise<Dashboar
   let kioskFilter = kioskId !== 'all' ? kioskId : undefined
 
   let revQuery = supabase.from('revenues').select('amount, print_jobs').gte('period_start', start)
-  let expQuery = supabase.from('expenses').select('amount, expense_type').gte('period_start', start)
+  let expQuery = supabase.from('expenses').select('amount, expense_type').gte('period_start', start).eq('status', 'approved')
 
   if (kioskFilter) {
     revQuery = revQuery.eq('kiosk_id', kioskFilter)
@@ -134,6 +134,7 @@ export function useChartData(
       let expenseQuery = supabase
         .from('expenses')
         .select('amount, expense_type, period_start, kiosk_id')
+        .eq('status', 'approved')
 
       if (kioskId !== 'all') {
         revenueQuery = revenueQuery.eq('kiosk_id', kioskId)
