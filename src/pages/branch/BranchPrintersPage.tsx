@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export function BranchPrintersPage() {
   const { investor } = useAuth()
@@ -12,29 +12,6 @@ export function BranchPrintersPage() {
     queryKey: ['branch-printers-list', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Mock assigned printers for demo
-        return [
-          {
-            id: 'p1',
-            name: 'Printer 1',
-            location: 'Madhapur IT Park',
-            status: 'active',
-            is_online: true,
-            displayCode: 'SP-001',
-            college: { name: 'Madhapur Transit Hub' }
-          },
-          {
-            id: 'p2',
-            name: 'Printer 2',
-            location: 'Kukatpally HB',
-            status: 'active',
-            is_online: true,
-            displayCode: 'SP-002',
-            college: { name: 'JNTU Campus' }
-          }
-        ]
-      }
 
       // Query database
       const { data: kiosks, error } = await supabase

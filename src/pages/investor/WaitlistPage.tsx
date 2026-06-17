@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-
 import { useToast } from '@/components/ui/Toast'
 import { initiatePayment } from '@/lib/razorpay'
 import type { Waitlist } from '@/types/database'

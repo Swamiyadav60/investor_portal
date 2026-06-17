@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
 
 export function BranchHistoryPage() {
@@ -13,15 +13,7 @@ export function BranchHistoryPage() {
     queryKey: ['branch-expenses-history', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Mock data in demo mode
-        return [
-          { id: 'exp-1', kiosk_id: 'p1', amount: 1200, category: 'Toner / Ink', expense_type: 'variable', period_start: '2026-06-15', status: 'approved', admin_remarks: 'Verified against receipt.', created_at: new Date().toISOString(), kiosk: { name: 'Printer 1' }, bill_url: 'https://placeholder.supabase.co/mock-bill-1.pdf' },
-          { id: 'exp-2', kiosk_id: 'p1', amount: 800, category: 'Paper', expense_type: 'variable', period_start: '2026-06-14', status: 'pending', admin_remarks: null, created_at: new Date().toISOString(), kiosk: { name: 'Printer 1' }, bill_url: null },
-          { id: 'exp-3', kiosk_id: 'p2', amount: 500, category: 'Maintenance', expense_type: 'fixed', period_start: '2026-06-05', status: 'rejected', admin_remarks: 'Amount mismatch with ticket. Please re-submit with correct billing info.', created_at: new Date().toISOString(), kiosk: { name: 'Printer 2' }, bill_url: 'https://placeholder.supabase.co/mock-bill-2.pdf' },
-          { id: 'exp-4', kiosk_id: 'p2', amount: 3500, category: 'Rent', expense_type: 'fixed', period_start: '2026-06-01', status: 'approved', admin_remarks: 'Auto-approved rent contract.', created_at: new Date().toISOString(), kiosk: { name: 'Printer 2' }, bill_url: null },
-        ]
-      }
+      
       const { data, error } = await supabase
         .from('expenses')
         .select('*, kiosk:kiosks(name)')

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured} from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -47,12 +47,7 @@ export function BranchLogExpensePage() {
     queryKey: ['branch-kiosks-verify', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        return [
-          { id: 'p1', name: 'Printer 1', location: 'Madhapur IT Park', status: 'active', displayCode: 'SP-001' },
-          { id: 'p2', name: 'Printer 2', location: 'Kukatpally HB', status: 'active', displayCode: 'SP-002' },
-        ]
-      }
+    
       const { data: kiosks, error } = await supabase
         .from('kiosks')
         .select('*')

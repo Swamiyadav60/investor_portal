@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
-import { DEMO_PAYOUTS } from '@/data/demo'
 import { fmt } from '@/lib/format'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import type { Payment } from '@/types/database'
 
@@ -10,29 +9,38 @@ export function AdminPaymentsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
-  const { data: payments = [], isLoading } = useQuery({
+  const {
+  data: payments = [],
+  isLoading,
+  error
+} = useQuery<Payment[]>({
     queryKey: ['admin-payments'],
     queryFn: async () => {
-      if (!isSupabaseConfigured) return DEMO_PAYOUTS as Payment[]
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*, investor:investors(full_name, email)')
-        .order('created_at', { ascending: false })
-      
-      if (error) throw error
-      return data as Payment[]
-    },
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*, investor:investors(full_name, email)')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  
+
+  return data || []
+},
   })
+  
 
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'paid' | 'failed' | 'cancelled' }) => {
-      if (!isSupabaseConfigured) return
-      const { error } = await supabase.from('payments').update({
-        status,
-        processed_at: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) throw error
-    },
+  const { error } = await supabase
+    .from('payments')
+    .update({
+      status,
+      processed_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) throw error
+},
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-payments'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] }) // Invalidate KPIs for revenue update
@@ -46,6 +54,16 @@ export function AdminPaymentsPage() {
   const pendingPayouts = payments.filter(p => p.payment_type === 'payout' && p.status === 'pending')
   const totalPaidOut = payments.filter(p => p.status === 'paid' && p.payment_type === 'payout').reduce((sum, p) => sum + p.amount, 0)
   const totalInvestments = payments.filter(p => p.payment_type === 'investment' && p.status === 'paid').reduce((sum, p) => sum + p.amount, 0)
+  if (error) {
+  return (
+    <>
+      <Topbar title="Payments" />
+      <div className="page-view content">
+        Error loading payments.
+      </div>
+    </>
+  )
+}
 
   return (
     <>

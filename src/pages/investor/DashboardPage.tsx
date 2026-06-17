@@ -5,7 +5,6 @@ import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown'
 import { ROIProgress } from '@/components/dashboard/ROIProgress'
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart'
 import { useDashboardData, useChartData } from '@/hooks/useDashboard'
-import { PRINTER_DATA } from '@/data/demo'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function DashboardPage() {
@@ -25,10 +24,9 @@ export function DashboardPage() {
 )
 
 
-  const printerData = PRINTER_DATA[kioskId] || PRINTER_DATA.all
-  const series = period === 'monthly' ? printerData.monthly : printerData.weekly
-  const jobs = series.jobs
-  const maxJobs = Math.max(...jobs)
+  const jobs: number[] = []
+const maxJobs = 1
+  
 
   if (!stats) return null
 
@@ -49,11 +47,11 @@ export function DashboardPage() {
         {/* Expense + ROI row */}
         <div className="dash-middle-row">
           <ExpenseBreakdown
-            variableTotal={stats.variableExpenses}
-            fixedTotal={stats.fixedExpenses}
-            varBreakdown={printerData.varBreakdown}
-            fixBreakdown={printerData.fixBreakdown}
-          />
+  variableTotal={stats.variableExpenses}
+  fixedTotal={stats.fixedExpenses}
+  varBreakdown={[]}
+  fixBreakdown={[]}
+/>
           <ROIProgress investment={stats.investment} recovered={stats.recovered} />
         </div>
 
@@ -89,7 +87,7 @@ export function DashboardPage() {
           </div>
           <div className="stat-card">
             <div className="stat-label">Occupancy rate</div>
-            <div className="stat-value">{printerData.occ}</div>
+            <div className="stat-value">{stats.occupancy}%</div>
             <div className="stat-sub">Avg daily active hours vs max</div>
           </div>
         </div>

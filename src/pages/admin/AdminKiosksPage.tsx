@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
-import { DEMO_KIOSKS } from '@/data/demo'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase,  } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 
 export function AdminKiosksPage() {
@@ -15,72 +14,43 @@ export function AdminKiosksPage() {
   // 1. Fetch live kiosks
   const { data: kiosks = [], isLoading } = useQuery({
     queryKey: ['admin-kiosks'],
-    queryFn: async () => {
-      if (!isSupabaseConfigured) return DEMO_KIOSKS
-      const { data, error } = await supabase
-        .from('kiosks')
-        .select(`
-          *,
-          college:colleges(name),
-          investor_kiosks(
-            status,
-            investor:investors(id, full_name, email)
-          ),
-          branch_ambassador:investors!kiosks_branch_ambassador_id_fkey(id, full_name, email)
-        `)
-        .order('created_at', { ascending: false })
+   queryFn: async () => {
+  const { data, error } = await supabase
+    .from('kiosks')
+    .select(`
+      *,
+      college:colleges(name),
+      investor_kiosks(
+        status,
+        investor:investors(id, full_name, email)
+      ),
+      branch_ambassador:investors!kiosks_branch_ambassador_id_fkey(id, full_name, email)
+    `)
+    .order('created_at', { ascending: false })
 
-      if (error) throw error
-      return data
-    }
+  if (error) throw error
+  return data || []
+}
   })
 
   // 2. Fetch users for assignment dropdown
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users-simple'],
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        return [
-          { id: 'demo-investor', full_name: 'Rahul Sharma', email: 'rahul.sharma@gmail.com', role: 'investor' },
-          { id: 'amb-1', full_name: 'Vikram Prasad', email: 'vikram.p@smartprinter.in', role: 'branch_ambassador' },
-          { id: 'amb-2', full_name: 'Aditi Rao', email: 'aditi.r@smartprinter.in', role: 'branch_ambassador' },
-        ]
-      }
-      const { data, error } = await supabase
-        .from('investors')
-        .select('id, full_name, email, role')
-        .order('full_name')
+  const { data, error } = await supabase
+    .from('investors')
+    .select('id, full_name, email, role')
+    .order('full_name')
 
-      if (error) throw error
-      return data
-    }
+  if (error) throw error
+
+  return data || []
+}
   })
 
   const assignMutation = useMutation({
     mutationFn: async ({ kioskId, userId }: { kioskId: string; userId: string }) => {
-      if (!isSupabaseConfigured) {
-        // Mock success in local cache
-        queryClient.setQueryData(['admin-kiosks'], (old: any) => {
-          return (old || []).map((k: any) => {
-            if (k.id === kioskId) {
-              if (assignType === 'ambassador') {
-                const amb = users.find(u => u.id === userId)
-                return { ...k, branch_ambassador_id: userId, branch_ambassador: amb }
-              } else {
-                const inv = users.find(u => u.id === userId)
-                return {
-                  ...k,
-                  investor_kiosks: [
-                    { status: 'active', investor: inv }
-                  ]
-                }
-              }
-            }
-            return k
-          })
-        })
-        return
-      }
+      
 
       if (assignType === 'ambassador') {
         // Update kiosks table branch_ambassador_id

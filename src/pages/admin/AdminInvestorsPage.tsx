@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import type { Investor } from '@/types/database'
 
@@ -21,15 +21,7 @@ export function AdminInvestorsPage() {
   const { data: investors = [], isLoading } = useQuery({
     queryKey: ['admin-investors'],
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Return demo investors + a couple branch ambassadors for demo representation
-        return [
-          { id: 'inv-1', user_id: 'u1', full_name: 'Rahul Sharma', email: 'rahul.sharma@gmail.com', city: 'Hyderabad', kyc_status: 'verified', role: 'investor', created_at: new Date().toISOString() },
-          { id: 'inv-2', user_id: 'u2', full_name: 'Priyanka Patel', email: 'priyanka@gmail.com', city: 'Mumbai', kyc_status: 'pending', role: 'investor', created_at: new Date().toISOString() },
-          { id: 'amb-1', user_id: 'u3', full_name: 'Vikram Prasad', email: 'vikram.p@smartprinter.in', city: 'Hyderabad', kyc_status: 'verified', role: 'branch_ambassador', created_at: new Date().toISOString() },
-          { id: 'amb-2', user_id: 'u4', full_name: 'Aditi Rao', email: 'aditi.r@smartprinter.in', city: 'Bengaluru', kyc_status: 'verified', role: 'branch_ambassador', created_at: new Date().toISOString() },
-        ] as Investor[]
-      }
+      
       const { data, error } = await supabase
         .from('investors')
         .select('*')
@@ -42,7 +34,7 @@ export function AdminInvestorsPage() {
 
   const updateKycMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'verified' | 'rejected' | 'pending' }) => {
-      if (!isSupabaseConfigured) return
+      
       const { error } = await supabase.from('investors').update({ kyc_status: status }).eq('id', id)
       if (error) throw error
     },
@@ -57,23 +49,7 @@ export function AdminInvestorsPage() {
 
   const createAmbassadorMutation = useMutation({
     mutationFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Add to query cache locally for demo feedback
-        queryClient.setQueryData(['admin-investors'], (old: any) => {
-          const mockAmb = {
-            id: `amb-${Date.now()}`,
-            user_id: `u-${Date.now()}`,
-            full_name: newAmbassador.fullName,
-            email: newAmbassador.email,
-            city: 'Hyderabad',
-            kyc_status: 'verified',
-            role: 'branch_ambassador',
-            created_at: new Date().toISOString()
-          }
-          return [mockAmb, ...(old || [])]
-        })
-        return
-      }
+      
 
       // Call supabase RPC
       const { data, error } = await supabase.rpc('create_ambassador_account', {

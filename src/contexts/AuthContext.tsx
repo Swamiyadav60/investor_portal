@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { getInitials } from '@/lib/format'
 import type { Investor, UserRole } from '@/types/database'
-import { DEMO_INVESTOR } from '@/data/demo'
+
 
 export type SignUpResult = 'session' | 'confirm_email'
 
@@ -15,13 +15,11 @@ interface AuthContextType {
   isAdmin: boolean
   isInvestor: boolean
   isAmbassador: boolean
-  isDemo: boolean
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string, fullName: string) => Promise<SignUpResult>
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   refreshInvestor: () => Promise<void>
-  enterDemo: (role?: UserRole) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -31,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [investor, setInvestor] = useState<Investor | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isDemo, setIsDemo] = useState(false)
 
   const ensureInvestorProfile = async (userId: string, email: string, fullName?: string) => {
     const { data: existing } = await supabase
@@ -87,10 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setLoading(false)
-      return
-    }
+    
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
@@ -139,33 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    if (isDemo) {
-      setInvestor(null)
-      setIsDemo(false)
-      setUser(null)
-      setSession(null)
-      return
-    }
+    await supabase.auth.signOut()
+setInvestor(null)
+setUser(null)
+setSession(null)
     await supabase.auth.signOut()
     setInvestor(null)
     setUser(null)
     setSession(null)
   }
 
-  const enterDemo = (role: UserRole = 'investor') => {
-    setInvestor({
-      ...DEMO_INVESTOR,
-      id: role === 'admin' ? 'demo-admin' : role === 'branch_ambassador' ? 'demo-ambassador' : 'demo-investor',
-      role,
-      full_name: role === 'admin' ? 'System Administrator' : role === 'branch_ambassador' ? 'Vikram Prasad' : 'Rahul Sharma',
-      email: role === 'admin' ? 'admin@smartprinter.in' : role === 'branch_ambassador' ? 'vikram.p@smartprinter.in' : 'rahul.sharma@gmail.com',
-      avatar_initials: role === 'admin' ? 'SA' : role === 'branch_ambassador' ? 'VP' : 'RS',
-      user_id: 'demo',
-      notification_prefs: { job_alerts: false, daily_summary: true, monthly_payout: true, maintenance_alerts: true, new_slots: false },
-      updated_at: new Date().toISOString(),
-    } as Investor)
-    setIsDemo(true)
-  }
+  
 
   return (
     <AuthContext.Provider value={{
@@ -173,8 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: investor?.role === 'admin',
       isInvestor: investor?.role === 'investor',
       isAmbassador: investor?.role === 'branch_ambassador',
-      isDemo,
-      signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, refreshInvestor, enterDemo,
+      signInWithEmail,
+signUpWithEmail,
+signInWithGoogle,
+signOut,
+refreshInvestor,
     }}>
       {children}
     </AuthContext.Provider>

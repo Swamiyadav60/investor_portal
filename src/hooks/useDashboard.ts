@@ -1,55 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { PRINTER_DATA } from '@/data/demo'
+import { supabase } from '@/lib/supabase'
 import type { DashboardStats } from '@/types/database'
 
 export function useDashboardData(kioskId: string, period: 'monthly' | 'weekly') {
-  const demoQuery = useQuery({
-    queryKey: ['dashboard', kioskId, period, 'demo'],
-    queryFn: () => computeDemoStats(kioskId, period),
-    enabled: !isSupabaseConfigured,
-  })
-
-  const liveQuery = useQuery({
-    queryKey: ['dashboard', kioskId, period, 'live'],
-    queryFn: () => fetchLiveStats(kioskId, period),
-    enabled: isSupabaseConfigured,
-    refetchInterval: 30000,
-  })
-
-  return isSupabaseConfigured ? liveQuery : demoQuery
-}
-
-function computeDemoStats(kioskId: string, period: 'monthly' | 'weekly'): DashboardStats {
-  const d = PRINTER_DATA[kioskId] || PRINTER_DATA.all
-  const series = period === 'monthly' ? d.monthly : d.weekly
-  const len = series.revenue.length
-  const cur = len - 1
-  const prev = len - 2
-  const rev = series.revenue[cur]
-  const var_ = series.varExp[cur]
-  const fix_ = series.fixExp[cur]
-  const exp = var_ + fix_
-  const profit = rev - exp
-  const prevProfit = series.revenue[prev] - series.varExp[prev] - series.fixExp[prev]
-  const revDelta = ((rev - series.revenue[prev]) / series.revenue[prev]) * 100
-  const profitDelta = ((profit - prevProfit) / Math.abs(prevProfit)) * 100
-  const last3 = [len - 1, len - 2, len - 3].map((i) => series.revenue[i] - series.varExp[i] - series.fixExp[i])
-  const avg3 = last3.reduce((a, b) => a + b, 0) / 3
-  const prev3avg = [len - 2, len - 3, len - 4].map((i) => series.revenue[i] - series.varExp[i] - series.fixExp[i]).reduce((a, b) => a + b, 0) / 3
-  const avg3Delta = ((avg3 - prev3avg) / Math.abs(prev3avg)) * 100
-  const profitShare = 70 
-  
-
-  return {
-    revenue: rev, expenses: exp, variableExpenses: var_, fixedExpenses: fix_,
-    netProfit: profit, 
-    
-    investorProfit:profit * (profitShare / 100),
-    revenueDelta: revDelta, profitDelta, avg3Profit: avg3, avg3Delta,
-    jobs: series.jobs[cur], jobsPrev: series.jobs[prev],
-    occupancy: parseFloat(d.occ), investment: d.investment, recovered: d.recovered,
-  }
+  return useQuery({
+  queryKey: ['dashboard', kioskId, period],
+  queryFn: () => fetchLiveStats(kioskId, period),
+  refetchInterval: 30000,
+})
 }
 
 async function fetchLiveStats(kioskId: string, period: string): Promise<DashboardStats> {

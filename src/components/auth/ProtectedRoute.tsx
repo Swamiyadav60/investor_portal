@@ -1,6 +1,5 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { isSupabaseConfigured } from '@/lib/supabase'
 import type { UserRole } from '@/types/database'
 
 export function ProtectedRoute({ 
@@ -12,7 +11,7 @@ export function ProtectedRoute({
   adminOnly?: boolean;
   allowedRoles?: UserRole[]
 }) {
-  const { user, investor, loading, isDemo, isAdmin, isAmbassador, isInvestor } = useAuth()
+  const { user, investor, loading, isAdmin, isAmbassador, isInvestor } = useAuth()
 
   if (loading) {
     return (
@@ -22,21 +21,25 @@ export function ProtectedRoute({
     )
   }
 
-  if (!isSupabaseConfigured && !isDemo && !investor) {
-    return <Navigate to="/login" replace />
-  }
+  if (!user) {
+  return <Navigate to="/login" replace />
+}
 
-  if (isSupabaseConfigured && !user && !isDemo) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (isSupabaseConfigured && user && !investor && !isDemo) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--gray)' }}>
-        Loading profile...
-      </div>
-    )
-  }
+if (user && !investor) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        color: 'var(--gray)',
+      }}
+    >
+      Loading profile...
+    </div>
+  )
+}
 
   // Admin always has access to everything
   if (isAdmin) return <>{children}</>

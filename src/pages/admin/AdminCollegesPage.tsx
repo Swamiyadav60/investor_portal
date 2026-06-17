@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
-import { DEMO_COLLEGES } from '@/data/demo'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
 import type { College } from '@/types/database'
 import { useToast } from '@/components/ui/Toast'
@@ -48,27 +47,36 @@ export function AdminCollegesPage() {
   const { data: colleges = [], isLoading } = useQuery({
     queryKey: ['colleges'],
     queryFn: async () => {
-      if (!isSupabaseConfigured) return DEMO_COLLEGES as College[]
-      const { data, error } = await supabase.from('colleges').select('*').order('created_at', { ascending: false })
-      if (error) throw error
-      return data as College[]
-    },
+  const { data, error } = await supabase
+    .from('colleges')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return data || []
+}
   })
 
   const createUpdateMutation = useMutation({
     mutationFn: async (collegeData: CollegeForm) => {
-      if (!isSupabaseConfigured) return
-      if (collegeData.id) {
-        // Update existing college
-        const { id, ...updateData } = collegeData
-        const { error } = await supabase.from('colleges').update(updateData).eq('id', id)
-        if (error) throw error
-      } else {
-        // Create new college
-        const { error } = await supabase.from('colleges').insert(collegeData)
-        if (error) throw error
-      }
-    },
+  if (collegeData.id) {
+    const { id, ...updateData } = collegeData
+
+    const { error } = await supabase
+      .from('colleges')
+      .update(updateData)
+      .eq('id', id)
+
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('colleges')
+      .insert(collegeData)
+
+    if (error) throw error
+  }
+},
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colleges'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] }) // Invalidate KPIs to update counts
@@ -83,10 +91,13 @@ export function AdminCollegesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (collegeId: string) => {
-      if (!isSupabaseConfigured) return
-      const { error } = await supabase.from('colleges').delete().eq('id', collegeId)
-      if (error) throw error
-    },
+  const { error } = await supabase
+    .from('colleges')
+    .delete()
+    .eq('id', collegeId)
+
+  if (error) throw error
+},
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colleges'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] })

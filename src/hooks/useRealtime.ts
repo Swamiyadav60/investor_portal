@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export function useRealtimeSubscription(tables: string[] = ['revenues', 'expenses', 'payments', 'print_jobs', 'kiosks']) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return
 
     const channels = tables.map((table) =>
       supabase

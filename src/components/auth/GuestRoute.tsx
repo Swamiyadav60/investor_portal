@@ -1,9 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { isSupabaseConfigured } from '@/lib/supabase'
 
 export function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { user, investor, loading, isDemo, isAmbassador } = useAuth()
+  const { user, investor, loading, isAmbassador } = useAuth()
 
   if (loading) {
     return (
@@ -13,7 +12,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const isAuthenticated = (isSupabaseConfigured && user) || isDemo || investor
+  const isAuthenticated = !!user && !!investor
 
   if (isAuthenticated) {
     if (isAmbassador) return <Navigate to="/ambassador/dashboard" replace />

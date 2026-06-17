@@ -2,29 +2,81 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { PerformanceChart } from '@/components/dashboard/PerformanceChart'
-import { KPICards } from '@/components/dashboard/KPICards'
-import { useDashboardData, useChartData } from '@/hooks/useDashboard'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import type { AdminKpis } from '@/types/database'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
+import type { AdminKpis } from '@/types/database'
+
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export function AdminAnalyticsPage() {
-  const [graphMetric, setGraphMetric] = useState<'revenue' | 'profit'>('revenue')
+  const [graphMetric, setGraphMetric]     = useState<'revenue' | 'profit'>('revenue')
   const [graphInterval, setGraphInterval] = useState<'monthly' | 'weekly'>('monthly')
-  const { data: stats } = useDashboardData('all', 'monthly')
-  const { data: chartData } = useChartData('all', graphInterval, graphMetric)
 
-  const { data: adminKpis, isLoading: isLoadingKpis } = useQuery({
+  // ── All revenues ─────────────────────────────────────────────
+  const { data: revenues = [] } = useQuery({
+    queryKey: ['admin-all-revenues'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('revenues')
+        .select('*')
+        .order('period_start')
+      if (error) throw error
+      return data || []
+    },
+  })
+
+  // ── All expenses ─────────────────────────────────────────────
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['admin-all-expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+      if (error) throw error
+      return data || []
+    },
+  })
+
+  // ── Admin KPIs via RPC ────────────────────────────────────────
+  const { data: adminKpis, isLoading: loadingKpis } = useQuery({
     queryKey: ['admin-kpis'],
     queryFn: async () => {
-      if (!isSupabaseConfigured) return null
       const { data, error } = await supabase.rpc('get_admin_kpis').single()
-      if (error) throw error
+      if (error) {
+        // Fallback: compute manually
+        const [colleges, waitlists] = await Promise.all([
+          supabase.from('colleges').select('slots_total, slots_taken'),
+          supabase.from('waitlists').select('waitlist_type, razorpay_payment_id'),
+        ])
+        const colData   = colleges.data || []
+        const wlData    = waitlists.data || []
+        return {
+          total_colleges:           colData.length,
+          available_slots:          colData.reduce((s: number, c: any) => s + (c.slots_total - c.slots_taken), 0),
+          free_waitlists:           wlData.filter((w: any) => w.waitlist_type === 'free').length,
+          priority_waitlists:       wlData.filter((w: any) => w.waitlist_type === 'priority').length,
+          priority_waitlist_revenue: wlData.filter((w: any) => w.waitlist_type === 'priority' && w.razorpay_payment_id).length * 499,
+        } as AdminKpis
+      }
       return data as AdminKpis
     },
   })
 
-  if (!stats) return null
+  // ── Platform totals ───────────────────────────────────────────
+  const totalRevenue = revenues.reduce((s: number, r: any) => s + Number(r.amount), 0)
+  const totalExp     = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0)
+  const totalProfit  = totalRevenue - totalExp
+  const totalJobs    = revenues.reduce((s: number, r: any) => s + Number(r.print_jobs || 0), 0)
+
+  // ── Chart data ────────────────────────────────────────────────
+  const chartLabels = MONTHS_SHORT
+  const chartValues = chartLabels.map((_, idx) => {
+    const monthRevs = revenues.filter((r: any) => new Date(r.period_start).getMonth() === idx)
+    const monthExps = expenses.filter((e: any) => new Date(e.period_start).getMonth() === idx)
+    const rev = monthRevs.reduce((s: number, r: any) => s + Number(r.amount), 0)
+    const exp = monthExps.reduce((s: number, e: any) => s + Number(e.amount), 0)
+    return graphMetric === 'revenue' ? rev : rev - exp
+  })
 
   return (
     <>
@@ -37,43 +89,63 @@ export function AdminAnalyticsPage() {
           </div>
         </div>
 
-        <KPICards stats={stats} period="monthly" />
+        {/* Platform revenue KPIs */}
+        <div className="rpt-kpi-row">
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">{fmt(totalRevenue)}</div>
+            <div className="rpt-kpi-lbl">Total platform revenue</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{fmt(totalProfit)}</div>
+            <div className="rpt-kpi-lbl">Net platform profit</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">{fmt(totalExp)}</div>
+            <div className="rpt-kpi-lbl">Total expenses</div>
+          </div>
+          <div className="rpt-kpi">
+            <div className="rpt-kpi-val">{totalJobs.toLocaleString('en-IN')}</div>
+            <div className="rpt-kpi-lbl">Total print jobs</div>
+          </div>
+        </div>
 
+        {/* Performance chart */}
         <PerformanceChart
-          values={chartData?.values || []}
-          labels={chartData?.labels || []}
-          label={chartData?.label || ''}
+          values={chartValues}
+          labels={chartLabels}
+          label="All kiosks · Platform"
           metric={graphMetric}
           interval={graphInterval}
           onMetricChange={setGraphMetric}
           onIntervalChange={setGraphInterval}
         />
 
+        {/* Admin KPI stats */}
         <div className="stats-row">
           <div className="stat-card">
             <div className="stat-label">Total Colleges</div>
-            <div className="stat-value">{isLoadingKpis ? '...' : adminKpis?.total_colleges || 0}</div>
+            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.total_colleges ?? '—'}</div>
             <div className="stat-sub">Locations registered</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Available Slots</div>
-            <div className="stat-value">{isLoadingKpis ? '...' : adminKpis?.available_slots || 0}</div>
+            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.available_slots ?? '—'}</div>
             <div className="stat-sub">Ready for investment</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Free Waitlists</div>
-            <div className="stat-value">{isLoadingKpis ? '...' : adminKpis?.free_waitlists || 0}</div>
+            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.free_waitlists ?? '—'}</div>
             <div className="stat-sub">Pending applications</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Priority Waitlists</div>
-            <div className="stat-value">{isLoadingKpis ? '...' : adminKpis?.priority_waitlists || 0}</div>
+            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.priority_waitlists ?? '—'}</div>
             <div className="stat-sub">Paid reservations</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Priority Revenue</div>
-            <div className="stat-value">{isLoadingKpis ? '...' : fmt(adminKpis?.priority_waitlist_revenue || 0)}</div>
-            <div className="stat-sub">From reservations</div>
+            <div className="stat-value">{loadingKpis ? '...' : fmt(adminKpis?.priority_waitlist_revenue ?? 0)}</div>
+            <div className="stat-sub">From ₹499 reservations</div>
           </div>
         </div>
       </div>

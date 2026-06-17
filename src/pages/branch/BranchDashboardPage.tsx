@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
 
 interface DashboardKpis {
@@ -22,13 +22,7 @@ export function BranchDashboardPage() {
     queryKey: ['branch-kiosks', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Mock data in demo mode
-        return [
-          { id: 'p1', name: 'Printer 1', location: 'Madhapur IT Park', status: 'active' },
-          { id: 'p2', name: 'Printer 2', location: 'Kukatpally HB', status: 'active' },
-        ]
-      }
+      
       const { data, error } = await supabase
         .from('kiosks')
         .select('*')
@@ -44,14 +38,7 @@ export function BranchDashboardPage() {
     queryKey: ['branch-expenses', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Mock data in demo mode
-        return [
-          { id: 'exp-1', kiosk_id: 'p1', amount: 1200, category: 'Toner / Ink', expense_type: 'variable', period_start: '2026-06-15', status: 'approved', admin_remarks: 'Verified against receipt.', created_at: new Date().toISOString(), kiosk: { name: 'Printer 1' } },
-          { id: 'exp-2', kiosk_id: 'p1', amount: 800, category: 'Paper', expense_type: 'variable', period_start: '2026-06-14', status: 'pending', admin_remarks: null, created_at: new Date().toISOString(), kiosk: { name: 'Printer 1' } },
-          { id: 'exp-3', kiosk_id: 'p2', amount: 500, category: 'Maintenance', expense_type: 'fixed', period_start: '2026-06-05', status: 'rejected', admin_remarks: 'Amount mismatch with ticket.', created_at: new Date().toISOString(), kiosk: { name: 'Printer 2' } },
-        ]
-      }
+      
       const { data, error } = await supabase
         .from('expenses')
         .select('*, kiosk:kiosks(name)')

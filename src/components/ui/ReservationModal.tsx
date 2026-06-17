@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { initiatePayment } from '@/lib/razorpay'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
@@ -22,10 +22,6 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
   const reservationMutation = useMutation({
     mutationFn: async (paymentId: string | null = null) => {
       if (!college || !investor) return
-
-      if (!isSupabaseConfigured) {
-        return { position: type === 'priority' ? 1 : Math.floor(Math.random() * 20) + 5, isPriority: type === 'priority' }
-      }
 
       // Call the join_waitlist RPC which handles shifting and positioning
       const { data: pos, error } = await supabase.rpc('join_waitlist', {
