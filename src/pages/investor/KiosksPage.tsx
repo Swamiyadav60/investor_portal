@@ -79,10 +79,17 @@ const { data: colleges = [] } = useQuery({
     return data || []
   }
 })
+const ownedKioskIds = [
+  ...activeKiosks.map(k => k.id),
+  ...pendingKiosks.map(k => k.id),
+]
   const filtered =
-  slotFilter === 'all'
+  (slotFilter === 'all'
     ? colleges
-    : colleges.filter((s) => s.type === slotFilter)
+    : colleges.filter(s => s.type === slotFilter)
+  )
+  .filter(s => !ownedKioskIds.includes(s.id))
+  .filter(s => s.slots_taken < s.slots_total)
 
   const handleInvest = async (college: any) => {
     try {
@@ -98,6 +105,7 @@ const { data: colleges = [] } = useQuery({
       toast('Payment gateway not configured. Set VITE_RAZORPAY_KEY_ID in .env', 'error')
     }
   }
+  
 
   return (
     <>
@@ -105,8 +113,9 @@ const { data: colleges = [] } = useQuery({
       <div className="page-view content">
         <div className="section-header">
           <div>
-            <div className="section-heading">My kiosks</div>
-            <div className="section-heading-sub">{activeKiosks.length} active slots · Earning since Feb 2025</div>
+            <div className="section-heading-sub">
+                 {activeKiosks.length} active slots
+            </div>
           </div>
         </div>
 
@@ -165,8 +174,12 @@ const { data: colleges = [] } = useQuery({
         </div>
 
         <div className="printer-cards">
-          {pendingKiosks.map((k) => (
-            <div key={k.id} className="pc pending-card">
+          {pendingKiosks.map((k) => {
+  const currentStep =
+    (k.install_steps as any[])?.filter((s: any) => s.done).length || 0
+
+  return (
+    <div key={k.id} className="pc pending-card">
               <div className="pc-accent" />
               <div className="pc-top">
                 <div className="pc-icon" style={{ background: 'var(--amber-l)' }}>
@@ -195,10 +208,13 @@ const { data: colleges = [] } = useQuery({
               </div>
               <div className="pc-footer">
                 <span className="pc-footer-note" style={{ color: 'var(--amber)' }}>{k.install_eta}</span>
-                <span style={{ fontSize: 11, color: 'var(--gray)' }}>Step 3 of 4</span>
+                <span style={{ fontSize: 11, color: 'var(--gray)' }}>
+                   Step {currentStep} of 4
+                </span>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="section-header" style={{ marginTop: '1.5rem', marginBottom: '.75rem' }}>
@@ -249,7 +265,13 @@ const { data: colleges = [] } = useQuery({
                     <div className="av-earn-lbl">One-time investment</div>
                   </div>
                 </div>
-                <button className="av-invest-btn" onClick={() => handleInvest(s)}>Invest in this slot →</button>
+                <button
+                   className="av-invest-btn"
+                   disabled={left <= 0}
+                   onClick={() => handleInvest(s)}
+                  >
+                  {left <= 0 ? 'Fully Booked' : 'Invest in this slot →'}
+                </button>
               </div>
             )
           })}

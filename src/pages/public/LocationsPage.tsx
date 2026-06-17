@@ -144,7 +144,19 @@ export function LocationsPage() {
             return (
               <div key={s.id} className="av-card">
                 <div className="av-img-wrap">
-                  <div className="av-img-placeholder">{s.name[0]}</div>
+                  {s.image_url ? (
+ <div className="av-img-wrap">
+  <img
+    src={s.image_url}
+    alt={s.name}
+    className="college-image"
+  />
+</div>
+) : (
+  <div className="av-img-placeholder">
+    {s.name[0]}
+  </div>
+)}
                   <span className={`av-badge ${s.tag}`}>{s.tag_label}</span>
 
                   {/* Overlay badge for full or already reserved */}

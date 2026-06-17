@@ -38,6 +38,14 @@ export function ProfilePage() {
       monthly_payout: true, maintenance_alerts: true, new_slots: false,
     }
   )
+  const formatDate = (date?: string) => {
+  if (!date) return 'N/A'
+
+  return new Date(date).toLocaleDateString('en-IN', {
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
   const handleSave = async () => {
     if (isSupabaseConfigured && investor) {
@@ -91,7 +99,7 @@ export function ProfilePage() {
               <div className="prof-avatar">{investor?.avatar_initials || 'VP'}</div>
               <div>
                 <div className="prof-name">{investor?.full_name}</div>
-                <div className="prof-since">Investor since Feb 2025 · 3 slots</div>
+                <div className="prof-since">Investor since {formatDate(investor?.created_at)}</div>
               </div>
             </div>
             {fields.map((f) => (
@@ -144,12 +152,11 @@ export function ProfilePage() {
               <div className="rpt-card-title">Payout bank details</div>
             </div>
             {[
-              { l: 'Bank name', v: investor?.bank_name || 'HDFC Bank' },
-              { l: 'Account no.', v: investor?.bank_account || '•••• •••• 4821' },
-              { l: 'IFSC code', v: investor?.bank_ifsc || 'HDFC0001234' },
-              { l: 'Account type', v: investor?.bank_account_type || 'Savings' },
-              { l: 'UPI ID', v: investor?.upi_id || 'rahul@hdfcbank' },
-            ].map((r) => (
+               { l: 'Bank name', v: investor?.bank_name || 'Not provided' },
+               { l: 'Account no.', v: investor?.bank_account || 'Not provided' },
+               { l: 'IFSC code', v: investor?.bank_ifsc || 'Not provided' },
+               { l: 'UPI ID', v: investor?.upi_id || 'Not provided' },
+              ].map((r) => (
               <div key={r.l} className="bank-row">
                 <span className="bank-row-lbl">{r.l}</span>
                 <span className="bank-row-val">{r.v}</span>

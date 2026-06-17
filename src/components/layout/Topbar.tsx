@@ -23,6 +23,7 @@ const { data: kiosks = [] } = useQuery({
   queryKey: ['investor-kiosks', investor?.id],
   enabled: !!investor?.id,
   queryFn: async () => {
+    
     const { data: assignments, error: assignmentError } =
       await supabase
         .from('investor_kiosks')
@@ -36,18 +37,20 @@ const { data: kiosks = [] } = useQuery({
       assignments?.map(a => a.kiosk_id) || []
 
     if (!kioskIds.length) return []
+    
 
     const { data: kiosks, error: kioskError } =
       await supabase
         .from('kiosks')
         .select('id,name,location,status')
         .in('id', kioskIds)
-
+      
     if (kioskError) throw kioskError
 
     return kiosks || []
   }
 })
+
   return (
     <div className="topbar">
       <div className="topbar-left">
@@ -55,19 +58,18 @@ const { data: kiosks = [] } = useQuery({
         {showFilters && (
           <div className="printer-dropdown-wrap">
             <select
-              className="printer-dropdown"
-              value={kioskId}
-              onChange={(e) => onKioskChange?.(e.target.value)}
-            >
-              <option value="all">All kiosks</option>
-              {kiosks
-  .filter((k) => k.status === 'active')
-  .map((k) => (
+  className="printer-dropdown"
+  value={kioskId}
+  onChange={(e) => onKioskChange?.(e.target.value)}
+>
+  <option value="all">All kiosks</option>
+
+  {kiosks.map((k) => (
     <option key={k.id} value={k.id}>
       {k.name} — {k.location}
     </option>
   ))}
-            </select>
+</select>
             <svg className="dropdown-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 6l4 4 4-4" />
             </svg>
