@@ -60,6 +60,7 @@ const kioskIds = assignments?.map(a => a.kiosk_id) || []
   let revQuery = supabase
   .from('revenues')
   .select('amount, print_jobs')
+  .gte('period_start', start) // ADD THIS
   .in('kiosk_id', kioskIds)
 
 let expQuery = supabase
@@ -167,7 +168,7 @@ export function useChartData(
   const monthIndex = new Date(r.period_start).getMonth()
 
   if (metric === 'revenue') {
-    monthValues[monthIndex] = Number(r.amount)
+    monthValues[monthIndex] += Number(r.amount)
   } else {
     const matchingExpenses =
       expenses?.filter(
@@ -180,8 +181,8 @@ export function useChartData(
         0
       )
 
-    monthValues[monthIndex] =
-      Number(r.amount) - expenseTotal
+    monthValues[monthIndex] +=
+  Number(r.amount) - expenseTotal
   }
 })
 
