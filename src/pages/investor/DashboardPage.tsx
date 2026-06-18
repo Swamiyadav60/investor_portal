@@ -14,7 +14,11 @@ export function DashboardPage() {
   const [graphInterval, setGraphInterval] = useState<'monthly' | 'weekly'>('monthly')
   const { investor } = useAuth()
 
-  const { data: stats } = useDashboardData(kioskId, period)
+  const { data: stats } = useDashboardData(
+  investor?.id,
+  kioskId,
+  period
+)
   const {
   data: chartData
 } = useChartData(

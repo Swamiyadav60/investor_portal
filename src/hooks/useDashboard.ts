@@ -2,24 +2,74 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { DashboardStats } from '@/types/database'
 
-export function useDashboardData(kioskId: string, period: 'monthly' | 'weekly') {
+export function useDashboardData(
+  investorId: string | undefined,
+  kioskId: string,
+  period: 'monthly' | 'weekly'
+) {
   return useQuery({
-  queryKey: ['dashboard', kioskId, period],
-  queryFn: () => fetchLiveStats(kioskId, period),
+  queryKey: ['dashboard', investorId, kioskId, period],
+queryFn: () =>
+  fetchLiveStats(investorId, kioskId, period),
+enabled: !!investorId,
   refetchInterval: 30000,
 })
 }
 
-async function fetchLiveStats(kioskId: string, period: string): Promise<DashboardStats> {
+async function fetchLiveStats(
+  investorId: string | undefined,
+  kioskId: string,
+  period: string
+): Promise<DashboardStats> {
   const now = new Date()
   const start = period === 'monthly'
     ? new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     : new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0]
 
+  const { data: assignments } = await supabase
+  .from('investor_kiosks')
+  .select('kiosk_id')
+  .eq('investor_id', investorId)
+  .eq('status', 'active')
+
+  const kioskIds =
+    assignments?.map(a => a.kiosk_id) || []
+
+  if (!kioskIds.length) {
+  return {
+    revenue: 0,
+    expenses: 0,
+    variableExpenses: 0,
+    fixedExpenses: 0,
+    netProfit: 0,
+    investorProfit: 0,
+    revenueDelta: 0,
+    profitDelta: 0,
+    avg3Profit: 0,
+    avg3Delta: 0,
+    jobs: 0,
+    jobsPrev: 0,
+    occupancy: 0,
+    investment: 0,
+    recovered: 0,
+  }
+}
+
   let kioskFilter = kioskId !== 'all' ? kioskId : undefined
 
-  let revQuery = supabase.from('revenues').select('amount, print_jobs').gte('period_start', start)
-  let expQuery = supabase.from('expenses').select('amount, expense_type').gte('period_start', start).eq('status', 'approved')
+  let revQuery = supabase
+  .from('revenues')
+  .select('amount, print_jobs')
+  .gte('period_start', start)
+
+let expQuery = supabase
+  .from('expenses')
+  .select('amount, expense_type')
+  .gte('period_start', start)
+  .eq('status', 'approved')
+
+revQuery = revQuery.in('kiosk_id', kioskIds)
+expQuery = expQuery.in('kiosk_id', kioskIds)
 
   if (kioskFilter) {
     revQuery = revQuery.eq('kiosk_id', kioskFilter)
@@ -40,6 +90,7 @@ async function fetchLiveStats(kioskId: string, period: string): Promise<Dashboar
     occupancy_rate,
     jobs_this_month
   `)
+  .in('id', kioskIds)
 
 const investment =
   kiosks?.reduce(
