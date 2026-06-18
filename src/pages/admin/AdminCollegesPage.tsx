@@ -45,12 +45,14 @@ export function AdminCollegesPage() {
   }, [editingCollege])
 
   const { data: colleges = [], isLoading } = useQuery({
-    queryKey: ['colleges'],
+    queryKey: ['admin-colleges'],
     queryFn: async () => {
   const { data, error } = await supabase
     .from('colleges')
     .select('*')
     .order('created_at', { ascending: false })
+
+     
 
   if (error) throw error
 
@@ -78,7 +80,7 @@ export function AdminCollegesPage() {
   }
 },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['colleges'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] }) // Invalidate KPIs to update counts
       toast(`College ${editingCollege ? 'updated' : 'added'} successfully.`, 'success')
       setShowModal(false)
@@ -99,7 +101,7 @@ export function AdminCollegesPage() {
   if (error) throw error
 },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['colleges'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] })
       toast('College deleted successfully.', 'success')
     },
@@ -123,7 +125,7 @@ export function AdminCollegesPage() {
       deleteMutation.mutate(collegeId)
     }
   }
-
+  
   return (
     <>
       <Topbar title="Colleges" />
@@ -138,6 +140,9 @@ export function AdminCollegesPage() {
 
         <div className="rpt-card">
           <div className="rpt-table-wrap">
+            <div style={{ color: 'red' }}>
+  Total colleges: {colleges.length}
+</div>
             <table className="admin-table">
               <thead>
                 <tr>

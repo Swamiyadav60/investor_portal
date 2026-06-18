@@ -72,25 +72,21 @@ const { data: colleges = [] } = useQuery({
     const { data, error } = await supabase
       .from('colleges')
       .select('*')
-      .eq('is_active', true)
+      
 
     if (error) throw error
-
+    
     return data || []
   }
 })
-const ownedKioskIds = [
-  ...activeKiosks.map(k => k.id),
-  ...pendingKiosks.map(k => k.id),
-]
-  const filtered =
+
+
+ const filtered =
   (slotFilter === 'all'
     ? colleges
-    : colleges.filter(s => s.type === slotFilter)
+    : colleges.filter(c => c.type === slotFilter)
   )
-  .filter(s => !ownedKioskIds.includes(s.id))
-  .filter(s => s.slots_taken < s.slots_total)
-
+  .filter(c => c.slots_taken < c.slots_total)
   const handleInvest = async (college: any) => {
     try {
       await initiatePayment({
@@ -120,7 +116,10 @@ const ownedKioskIds = [
         </div>
 
         <div className="printer-cards">
-          {activeKiosks.map((k) => (
+          {activeKiosks.map((k) => {
+            const investorProfit =Number(k.recovered_amount || 0)
+
+  return (
             <div key={k.id} className="pc">
               <div className="pc-accent" style={{ background: 'var(--green)' }} />
               <div className="pc-top">
@@ -136,7 +135,9 @@ const ownedKioskIds = [
               </div>
               <div className="pc-stats">
                 <div className="pc-stat">
-                  <div className="pc-stat-val" style={{ color: 'var(--green)' }}>{fmt(k.monthly_earnings)}</div>
+                  <div className="pc-stat-val" style={{ color: 'var(--green)' }}>
+                      {fmt(investorProfit)}
+                  </div>
                   <div className="pc-stat-lbl">Your share / mo</div>
                 </div>
                 <div className="pc-stat">
@@ -144,7 +145,7 @@ const ownedKioskIds = [
                   <div className="pc-stat-lbl">Jobs this month</div>
                 </div>
                 <div className="pc-stat">
-                  <div className="pc-stat-val">{fmt(k.total_earned)}</div>
+                  <div className="pc-stat-val">{fmt(investorProfit)}</div>
                   <div className="pc-stat-lbl">Total earned</div>
                 </div>
                 <div className="pc-stat">
@@ -157,7 +158,8 @@ const ownedKioskIds = [
                 <button className="pc-btn" onClick={() => navigate('/dashboard')}>View stats →</button>
               </div>
             </div>
-          ))}
+            )
+           })}
         </div>
 
         <div className="section-divider">

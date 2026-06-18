@@ -49,6 +49,10 @@ const { data } = useQuery({
         .in('kiosk_id', kioskIds)
         .eq('status', 'approved')
     ])
+    const { data: payouts } = await supabase
+  .from('payments')
+  .select('amount,status')
+  .eq('investor_id', investor!.id)
     
 
     const reportData = (revenues || []).map(r => {
@@ -87,9 +91,11 @@ const { data } = useQuery({
 }
     })
     const recoveredTotal =
-  kiosks?.reduce(
-    (sum, k: any) =>
-      sum + Number(k.kiosks?.recovered_amount || 0),
+  payouts?.reduce(
+    (sum, p) =>
+      p.status === 'success'
+        ? sum + Number(p.amount)
+        : sum,
     0
   ) || 0
 
@@ -158,7 +164,7 @@ const totalJobs =
             <div className="rpt-kpi-lbl">Total revenue (YTD)</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{fmt(totalProfit)}</div>
+            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{fmt(totalShare)}</div>
             <div className="rpt-kpi-lbl">Your profit (YTD)</div>
           </div>
           <div className="rpt-kpi">
@@ -235,7 +241,7 @@ const totalJobs =
             </div>
             <div className="rpt-tax-row rpt-tax-total">
               <span>Net taxable income (est.)</span>
-              <span style={{ color: 'var(--green)' }}>{fmt(totalProfit)}</span>
+              <span style={{ color: 'var(--green)' }}>{fmt(totalShare)}</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem', lineHeight: 1.5 }}>
               Consult your CA for exact TDS/IT filing guidance. This is an estimate only.

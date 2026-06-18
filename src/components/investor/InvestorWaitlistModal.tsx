@@ -49,12 +49,7 @@ export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: I
         p_notes: type === 'priority' ? 'Priority Waitlist (Paid ₹499 via Razorpay)' : 'Free Waitlist'
       }
 
-      console.log('RPC Payload', {
-        collegeId: college.id,
-        userId: investor.id,
-        type,
-        paymentId
-      })
+      
 
       const { data: pos, error } = await supabase.rpc('join_waitlist', payload)
       if (error) throw error

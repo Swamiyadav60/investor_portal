@@ -32,8 +32,8 @@ async function fetchLiveStats(
   .eq('investor_id', investorId)
   .eq('status', 'active')
 
-  const kioskIds =
-    assignments?.map(a => a.kiosk_id) || []
+const kioskIds = assignments?.map(a => a.kiosk_id) || []
+
 
   if (!kioskIds.length) {
   return {
@@ -60,7 +60,7 @@ async function fetchLiveStats(
   let revQuery = supabase
   .from('revenues')
   .select('amount, print_jobs')
-  .gte('period_start', start)
+  .in('kiosk_id', kioskIds)
 
 let expQuery = supabase
   .from('expenses')
@@ -82,15 +82,16 @@ expQuery = expQuery.in('kiosk_id', kioskIds)
   const fixedExpenses = expenses?.filter((e) => e.expense_type === 'fixed').reduce((s, e) => s + Number(e.amount), 0) || 0
   
   const netProfit = revenue - variableExpenses - fixedExpenses
+  const investorProfit = netProfit * 0.7
  const { data: kiosks } = await supabase
   .from('kiosks')
-  .select(`
-    investment_amount,
-    recovered_amount,
-    occupancy_rate,
-    jobs_this_month
-  `)
+  .select('investment_amount')
   .in('id', kioskIds)
+
+const { data: payouts } = await supabase
+  .from('payments')
+  .select('amount,status')
+  .eq('investor_id', investorId)
 
 const investment =
   kiosks?.reduce(
@@ -98,30 +99,32 @@ const investment =
     0
   ) || 0
 
-const recovered =
-  kiosks?.reduce(
-    (sum, k) => sum + Number(k.recovered_amount || 0),
+
+
+const totalPaidOut =
+  payouts?.reduce(
+    (sum, p) =>
+      p.status === 'success'
+        ? sum + Number(p.amount)
+        : sum,
+    0
+  ) || 0
+const recovered = totalPaidOut
+const jobs =
+  revenues?.reduce(
+    (sum, r) => sum + Number(r.print_jobs || 0),
     0
   ) || 0
 
 const occupancy =
-  kiosks?.length
-    ? kiosks.reduce(
-        (sum, k) => sum + Number(k.occupancy_rate || 0),
-        0
-      ) / kiosks.length
+  jobs > 0
+    ? Math.min(Math.round((jobs / 1000) * 100), 100)
     : 0
-
-const kioskJobs =
-  kiosks?.reduce(
-    (sum, k) => sum + Number(k.jobs_this_month || 0),
-    0
-  ) || 0
   return {
     revenue, expenses: variableExpenses + fixedExpenses, variableExpenses, fixedExpenses,
-    netProfit, investorProfit: netProfit * 0.7,
+    netProfit, investorProfit,
     revenueDelta: 0, profitDelta: 0, avg3Profit: netProfit, avg3Delta: 0,
-    jobs: kioskJobs, jobsPrev: 0, occupancy, investment, recovered,
+    jobs: jobs, jobsPrev: 0, occupancy, investment, recovered,
   }
 }
 

@@ -27,10 +27,77 @@ export function PayoutsPage() {
     return data || []
   }
 })
-const availableBalance =
-  payouts
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+const { data: revenues = [] } = useQuery({
+  queryKey: ['investor-profit', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data: assignments } = await supabase
+      .from('investor_kiosks')
+      .select('kiosk_id')
+      .eq('investor_id', investor!.id)
+      .eq('status', 'active')
+
+    const kioskIds =
+      assignments?.map(a => a.kiosk_id) || []
+
+    if (!kioskIds.length) return []
+
+    const { data } = await supabase
+      .from('revenues')
+      .select('amount')
+      .in('kiosk_id', kioskIds)
+
+    return data || []
+  }
+})
+const { data: expenses = [] } = useQuery({
+  queryKey: ['investor-expenses', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data: assignments } = await supabase
+      .from('investor_kiosks')
+      .select('kiosk_id')
+      .eq('investor_id', investor!.id)
+      .eq('status', 'active')
+
+    const kioskIds =
+      assignments?.map(a => a.kiosk_id) || []
+
+    if (!kioskIds.length) return []
+
+    const { data } = await supabase
+      .from('expenses')
+      .select('amount')
+      .in('kiosk_id', kioskIds)
+      .eq('status', 'approved')
+
+    return data || []
+  }
+})
+const totalRevenue =
+  revenues.reduce(
+    (sum, r) => sum + Number(r.amount),
+    0
+  )
+
+const totalExpenses =
+  expenses.reduce(
+    (sum, e) => sum + Number(e.amount),
+    0
+  )
+
+const investorProfit =
+  (totalRevenue - totalExpenses) * 0.7
+const totalPaid =
+  payouts.reduce(
+    (sum, p) =>
+      p.status === 'success'
+        ? sum + Number(p.amount)
+        : sum,
+    0
+  )
+  const availableBalance =
+  Math.max(investorProfit - totalPaid, 0)
   const { toast } = useToast()
 
   const handleWithdraw = async () => {
