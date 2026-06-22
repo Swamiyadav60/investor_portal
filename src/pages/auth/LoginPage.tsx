@@ -15,7 +15,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, enterDemo, investor } = useAuth()
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, investor } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -74,7 +74,6 @@ export function LoginPage() {
   }
 
   const handleDemo = () => {
-    enterDemo(selectedRole)
     if (selectedRole === 'branch_ambassador') {
       navigate('/branch/dashboard')
     } else if (selectedRole === 'admin') {
