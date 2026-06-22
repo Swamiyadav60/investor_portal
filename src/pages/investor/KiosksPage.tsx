@@ -117,7 +117,8 @@ const { data: colleges = [] } = useQuery({
 
         <div className="printer-cards">
           {activeKiosks.map((k) => {
-            const investorProfit =Number(k.recovered_amount || 0)
+            const monthlyShare = Number(k.monthly_earnings || 0)
+            const totalEarned  = Number(k.total_earned || 0)
 
   return (
             <div key={k.id} className="pc">
@@ -136,7 +137,7 @@ const { data: colleges = [] } = useQuery({
               <div className="pc-stats">
                 <div className="pc-stat">
                   <div className="pc-stat-val" style={{ color: 'var(--green)' }}>
-                      {fmt(investorProfit)}
+                    {fmt(monthlyShare)}          {/* ← was investorProfit */}
                   </div>
                   <div className="pc-stat-lbl">Your share / mo</div>
                 </div>
@@ -145,7 +146,7 @@ const { data: colleges = [] } = useQuery({
                   <div className="pc-stat-lbl">Jobs this month</div>
                 </div>
                 <div className="pc-stat">
-                  <div className="pc-stat-val">{fmt(investorProfit)}</div>
+                  <div className="pc-stat-val">{fmt(totalEarned)}</div>   {/* ← was investorProfit */}
                   <div className="pc-stat-lbl">Total earned</div>
                 </div>
                 <div className="pc-stat">
