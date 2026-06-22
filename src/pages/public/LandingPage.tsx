@@ -383,16 +383,41 @@ export function LandingPage() {
           <div className="benefits-card">
             <div className="benefits-content">
               <h2 className="section-title" style={{ color: 'var(--white)' }}>Investor Benefits</h2>
-              <ul className="benefits-list">
-                <li><strong>Passive Income:</strong> Earn while you sleep as students print 24/7.</li>
-                <li><strong>Zero Maintenance:</strong> We handle all hardware repairs and paper/ink refills.</li>
-                <li><strong>Realtime Tracking:</strong> Monitor every single print job from your phone.</li>
-                <li><strong>High ROI:</strong> Most investors recover their capital within 12-14 months.</li>
-              </ul>
-              <Link to="/login" className="hero-btn-primary" style={{ marginTop: '2rem', backgroundColor: 'var(--white)', color: 'var(--ink)', border: '1px solid var(--border)' }}>Get Started Today</Link>
+              <div className="benefits-grid">
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                  </div>
+                  <div className="benefit-title">Passive Income</div>
+                  <div className="benefit-desc">Earn while you sleep as students print 24/7.</div>
+                </div>
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 9.36l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 9.36-7.94l-3.79 3.79z"/></svg>
+                  </div>
+                  <div className="benefit-title">Zero Maintenance</div>
+                  <div className="benefit-desc">We handle all hardware repairs and paper/ink refills.</div>
+                </div>
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3" /><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /></svg>
+                  </div>
+                  <div className="benefit-title">Realtime Tracking</div>
+                  <div className="benefit-desc">Monitor every single print job from your phone.</div>
+                </div>
+                <div className="benefit-item">
+                  <div className="benefit-icon">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
+                  </div>
+                  <div className="benefit-title">High ROI</div>
+                  <div className="benefit-desc">Most investors recover their capital within 12-14 months.</div>
+                </div>
+              </div>
+              <Link to="/login" className="hero-btn-primary" style={{ backgroundColor: 'var(--white)', color: '#f4f3ef', border: '1px solid var(--border)' }}>Get Started Today</Link>
             </div>
             <div className="benefits-visual">
               <div className="benefits-circle" />
+              <img src={heroImage} alt="Smart Printer Kiosk" className="benefits-hero-img" />
             </div>
           </div>
         </div>
