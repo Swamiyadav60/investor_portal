@@ -50,3 +50,24 @@ export function exportToCSV(data: Record<string, unknown>[], filename: string): 
 }
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function maskPan(pan: string | null | undefined): string {
+  if (!pan) return '-'
+  const cleaned = pan.trim()
+  if (cleaned.length < 4) return cleaned
+  return '•'.repeat(Math.max(0, cleaned.length - 4)) + cleaned.slice(-4)
+}
+
+export function maskAadhaar(aadhaar: string | null | undefined): string {
+  if (!aadhaar) return '-'
+  const cleaned = aadhaar.trim().replace(/\s+/g, '')
+  if (cleaned.length < 4) return cleaned
+  return '•••• •••• ' + cleaned.slice(-4)
+}
+
+export function maskBankAccount(account: string | null | undefined): string {
+  if (!account) return '-'
+  const cleaned = account.trim()
+  if (cleaned.length < 4) return cleaned
+  return '•'.repeat(Math.max(4, cleaned.length - 4)) + cleaned.slice(-4)
+}

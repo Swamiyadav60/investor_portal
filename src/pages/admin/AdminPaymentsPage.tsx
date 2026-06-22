@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
-import { fmt } from '@/lib/format'
+import { fmt, maskBankAccount } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import type { Payment } from '@/types/database'
@@ -120,7 +120,7 @@ export function AdminPaymentsPage() {
                         </span>
                       </td>
                       <td>
-                        {p.payment_type === 'payout' && `Account: ${p.bank_account || 'N/A'}`}
+                        {p.payment_type === 'payout' && `Account: ${p.bank_account ? maskBankAccount(p.bank_account) : 'N/A'}`}
                         {p.payment_type === 'investment' && `Razorpay ID: ${p.razorpay_payment_id?.slice(0, 8) || 'N/A'}`}
                         {p.notes && ` (${p.notes})`}
                       </td>

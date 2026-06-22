@@ -45,6 +45,14 @@ export interface Investor {
   notification_prefs: NotificationPrefs
   created_at: string
   updated_at: string
+  // New KYC and Bank columns
+  mobile_number: string | null
+  pan_number: string | null
+  aadhaar_number: string | null
+  bank_account_holder: string | null
+  bank_account_number: string | null
+  ifsc_code: string | null
+  kyc_submitted_at: string | null
 }
 
 export interface College {

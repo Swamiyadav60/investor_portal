@@ -1,103 +1,101 @@
 import { useState } from 'react'
 import { Topbar } from '@/components/layout/Topbar'
 import { ExportButton } from '@/components/ui/ExportButton'
-import { fmt, exportToCSV } from '@/lib/format'
+import { fmt, exportToCSV, maskBankAccount } from '@/lib/format'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
-
-
 export function PayoutsPage() {
   const [withdrawAmt, setWithdrawAmt] = useState('')
   const { investor } = useAuth()
   const { data: payouts = [] } = useQuery({
-  queryKey: ['payouts', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('investor_id', investor!.id)
-      .order('created_at', { ascending: false })
+    queryKey: ['payouts', investor?.id],
+    enabled: !!investor?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('investor_id', investor!.id)
+        .order('created_at', { ascending: false })
 
-    if (error) throw error
+      if (error) throw error
 
-    return data || []
-  }
-})
-const { data: revenues = [] } = useQuery({
-  queryKey: ['investor-profit', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data: assignments } = await supabase
-      .from('investor_kiosks')
-      .select('kiosk_id')
-      .eq('investor_id', investor!.id)
-      .eq('status', 'active')
+      return data || []
+    }
+  })
+  const { data: revenues = [] } = useQuery({
+    queryKey: ['investor-profit', investor?.id],
+    enabled: !!investor?.id,
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from('investor_kiosks')
+        .select('kiosk_id')
+        .eq('investor_id', investor!.id)
+        .eq('status', 'active')
 
-    const kioskIds =
-      assignments?.map(a => a.kiosk_id) || []
+      const kioskIds =
+        assignments?.map(a => a.kiosk_id) || []
 
-    if (!kioskIds.length) return []
+      if (!kioskIds.length) return []
 
-    const { data } = await supabase
-      .from('revenues')
-      .select('amount')
-      .in('kiosk_id', kioskIds)
+      const { data } = await supabase
+        .from('revenues')
+        .select('amount')
+        .in('kiosk_id', kioskIds)
 
-    return data || []
-  }
-})
-const { data: expenses = [] } = useQuery({
-  queryKey: ['investor-expenses', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data: assignments } = await supabase
-      .from('investor_kiosks')
-      .select('kiosk_id')
-      .eq('investor_id', investor!.id)
-      .eq('status', 'active')
+      return data || []
+    }
+  })
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['investor-expenses', investor?.id],
+    enabled: !!investor?.id,
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from('investor_kiosks')
+        .select('kiosk_id')
+        .eq('investor_id', investor!.id)
+        .eq('status', 'active')
 
-    const kioskIds =
-      assignments?.map(a => a.kiosk_id) || []
+      const kioskIds =
+        assignments?.map(a => a.kiosk_id) || []
 
-    if (!kioskIds.length) return []
+      if (!kioskIds.length) return []
 
-    const { data } = await supabase
-      .from('expenses')
-      .select('amount')
-      .in('kiosk_id', kioskIds)
-      .eq('status', 'approved')
+      const { data } = await supabase
+        .from('expenses')
+        .select('amount')
+        .in('kiosk_id', kioskIds)
+        .eq('status', 'approved')
 
-    return data || []
-  }
-})
-const totalRevenue =
-  revenues.reduce(
-    (sum, r) => sum + Number(r.amount),
-    0
-  )
+      return data || []
+    }
+  })
+  const totalRevenue =
+    revenues.reduce(
+      (sum, r) => sum + Number(r.amount),
+      0
+    )
 
-const totalExpenses =
-  expenses.reduce(
-    (sum, e) => sum + Number(e.amount),
-    0
-  )
+  const totalExpenses =
+    expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0
+    )
 
-const investorProfit =
-  (totalRevenue - totalExpenses) * 0.7
-const totalPaid =
-  payouts.reduce(
-    (sum, p) =>
-      p.status === 'success'
-        ? sum + Number(p.amount)
-        : sum,
-    0
-  )
+  const investorProfit =
+    (totalRevenue - totalExpenses) * 0.7
+  const totalPaid =
+    payouts.reduce(
+      (sum, p) =>
+        p.status === 'success'
+          ? sum + Number(p.amount)
+          : sum,
+      0
+    )
   const availableBalance =
-  Math.max(investorProfit - totalPaid, 0)
+    Math.max(investorProfit - totalPaid, 0)
   const { toast } = useToast()
 
   const handleWithdraw = async () => {
@@ -105,28 +103,30 @@ const totalPaid =
     if (!amt || amt <= 0) { toast('Please enter a valid amount.', 'error'); return }
     if (amt > availableBalance) { toast(`Amount exceeds available balance of ${fmt(availableBalance)}.`, 'error'); return }
 
+    const activeAccount = investor?.bank_account_number || investor?.bank_account
+
     if (isSupabaseConfigured && investor) {
       const { error } = await supabase.from('payments').insert({
         investor_id: investor.id,
         amount: amt,
         status: 'pending',
         payment_type: 'withdrawal',
-        bank_account: investor.bank_account,
+        bank_account: activeAccount,
       })
       if (error) { toast(error.message, 'error'); return }
     }
 
-    toast(`Withdrawal of ${fmt(amt)} requested. Funds will reach ${investor?.bank_name || 'HDFC'} ${investor?.bank_account || '••••4821'} within 2 business days.`, 'success')
+    toast(`Withdrawal of ${fmt(amt)} requested. Funds will reach ${investor?.bank_name || 'HDFC'} ${maskBankAccount(activeAccount) || '••••4821'} within 2 business days.`, 'success')
     setWithdrawAmt('')
   }
 
   const handleExport = () => {
     exportToCSV(
       payouts.map((p) => ({
-  Amount: p.amount,
-  Status: p.status,
-  Date: p.created_at,
-})),
+        Amount: p.amount,
+        Status: p.status,
+        Date: p.created_at,
+      })),
       'smartprinter-payouts.csv'
     )
   }
@@ -142,14 +142,14 @@ const totalPaid =
           </div>
           <div className="rpt-kpi">
             <div className="rpt-kpi-val">{fmt(
-  payouts.reduce(
-    (sum, p) =>
-      p.status === 'success'
-        ? sum + Number(p.amount)
-        : sum,
-    0
-  )
-)}</div>
+              payouts.reduce(
+                (sum, p) =>
+                  p.status === 'success'
+                    ? sum + Number(p.amount)
+                    : sum,
+                0
+              )
+            )}</div>
             <div className="rpt-kpi-lbl">Total paid out (all time)</div>
           </div>
           <div className="rpt-kpi">
@@ -157,7 +157,7 @@ const totalPaid =
             <div className="rpt-kpi-lbl">Next scheduled payout</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val">{investor?.bank_name || '-'} {investor?.bank_account || '-'}</div>
+            <div className="rpt-kpi-val">{investor?.bank_name || '-'} {maskBankAccount(investor?.bank_account_number || investor?.bank_account)}</div>
             <div className="rpt-kpi-lbl">Linked account</div>
           </div>
         </div>
@@ -197,77 +197,77 @@ const totalPaid =
           <div className="rpt-table-wrap">
             <table className="rpt-table">
               <thead>
-  <tr>
-    <th>Date</th>
-    <th>Amount</th>
-    <th>Status</th>
-    <th>Processed</th>
-  </tr>
-</thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Processed</th>
+                </tr>
+              </thead>
               <tbody>
-  {payouts
-    .filter((p) => p.payment_type === 'withdrawal')
-    .map((p) => (
-      <tr key={p.id}>
-        <td>
-          {new Date(p.created_at).toLocaleDateString('en-IN')}
-        </td>
+                {payouts
+                  .filter((p) => p.payment_type === 'withdrawal')
+                  .map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        {new Date(p.created_at).toLocaleDateString('en-IN')}
+                      </td>
 
-        <td style={{ fontWeight: 600 }}>
-          {fmt(Number(p.amount))}
-        </td>
+                      <td style={{ fontWeight: 600 }}>
+                        {fmt(Number(p.amount))}
+                      </td>
 
-        <td>
-          {p.status === 'pending' ? (
-            <span
-              style={{
-                background: 'var(--amber-l)',
-                color: '#A05C10',
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: 999
-              }}
-            >
-              Pending
-            </span>
-          ) : p.status === 'success' ? (
-            <span
-              style={{
-                background: 'var(--green-l)',
-                color: 'var(--green-d)',
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: 999
-              }}
-            >
-              Success
-            </span>
-          ) : (
-            <span
-              style={{
-                background: '#FEE2E2',
-                color: '#B91C1C',
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: 999
-              }}
-            >
-              Cancelled
-            </span>
-          )}
-        </td>
+                      <td>
+                        {p.status === 'pending' ? (
+                          <span
+                            style={{
+                              background: 'var(--amber-l)',
+                              color: '#A05C10',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 999
+                            }}
+                          >
+                            Pending
+                          </span>
+                        ) : p.status === 'success' ? (
+                          <span
+                            style={{
+                              background: 'var(--green-l)',
+                              color: 'var(--green-d)',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 999
+                            }}
+                          >
+                            Success
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              background: '#FEE2E2',
+                              color: '#B91C1C',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 999
+                            }}
+                          >
+                            Cancelled
+                          </span>
+                        )}
+                      </td>
 
-        <td>
-          {p.processed_at
-            ? new Date(p.processed_at).toLocaleDateString('en-IN')
-            : '-'}
-        </td>
-      </tr>
-    ))}
-</tbody>
+                      <td>
+                        {p.processed_at
+                          ? new Date(p.processed_at).toLocaleDateString('en-IN')
+                          : '-'}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
             </table>
           </div>
         </div>
@@ -278,8 +278,8 @@ const totalPaid =
           </div>
           {[
             { l: 'Bank name', v: investor?.bank_name || '-' },
-            { l: 'Account no.', v: investor?.bank_account || '-' },
-            { l: 'IFSC code', v: investor?.bank_ifsc || '-' },
+            { l: 'Account no.', v: maskBankAccount(investor?.bank_account_number || investor?.bank_account) },
+            { l: 'IFSC code', v: investor?.ifsc_code || investor?.bank_ifsc || '-' },
             { l: 'Account type', v: investor?.bank_account_type || '-' },
             { l: 'UPI ID', v: investor?.upi_id || '-' },
           ].map((r) => (

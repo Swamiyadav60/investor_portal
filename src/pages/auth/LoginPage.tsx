@@ -3,10 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
+import { useToast } from '@/components/ui/Toast'
 import type { UserRole } from '@/types/database'
 
 export function LoginPage() {
   const location = useLocation()
+  const { toast } = useToast()
+  
+  // Basic states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -15,6 +19,19 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Extended KYC / Bank states
+  const [mobileNumber, setMobileNumber] = useState('')
+  const [panNumber, setPanNumber] = useState('')
+  const [aadhaarNumber, setAadhaarNumber] = useState('')
+  const [bankAccountHolder, setBankAccountHolder] = useState('')
+  const [bankAccountNumber, setBankAccountNumber] = useState('')
+  const [ifscCode, setIfscCode] = useState('')
+  const [bankName, setBankName] = useState('')
+
+  // Field validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, investor } = useAuth()
   const navigate = useNavigate()
 
@@ -25,27 +42,117 @@ export function LoginPage() {
     }
   }, [location.state])
 
+  const validateForm = () => {
+    const errs: Record<string, string> = {}
+    
+    // Core credentials validations
+    if (!email.trim()) {
+      errs.email = 'Email address is required.'
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errs.email = 'Invalid email address.'
+    }
+
+    if (!password) {
+      errs.password = 'Password is required.'
+    } else if (password.length < 6) {
+      errs.password = 'Password must be at least 6 characters.'
+    }
+
+    // KYC & Bank Details validations
+    if (isSignUp) {
+      if (!fullName.trim()) {
+        errs.fullName = 'Full Name is required.'
+      }
+      
+      const phoneClean = mobileNumber.trim()
+      if (!phoneClean) {
+        errs.mobileNumber = 'Mobile Number is required.'
+      } else if (!/^[0-9]{10}$/.test(phoneClean)) {
+        errs.mobileNumber = 'Mobile Number must be exactly 10 digits.'
+      }
+
+      const panClean = panNumber.trim().toUpperCase()
+      if (!panClean) {
+        errs.panNumber = 'PAN Number is required.'
+      } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean)) {
+        errs.panNumber = 'Invalid PAN format. Must be in ABCDE1234F format.'
+      }
+
+      const aadhaarClean = aadhaarNumber.trim().replace(/\s+/g, '')
+      if (!aadhaarClean) {
+        errs.aadhaarNumber = 'Aadhaar Number is required.'
+      } else if (!/^[0-9]{12}$/.test(aadhaarClean)) {
+        errs.aadhaarNumber = 'Aadhaar Number must be exactly 12 digits.'
+      }
+
+      if (!bankAccountHolder.trim()) {
+        errs.bankAccountHolder = 'Account Holder Name is required.'
+      }
+
+      const bankAccClean = bankAccountNumber.trim()
+      if (!bankAccClean) {
+        errs.bankAccountNumber = 'Bank Account Number is required.'
+      } else if (!/^[0-9]+$/.test(bankAccClean)) {
+        errs.bankAccountNumber = 'Account Number must contain digits only.'
+      }
+
+      const ifscClean = ifscCode.trim().toUpperCase()
+      if (!ifscClean) {
+        errs.ifscCode = 'IFSC Code is required.'
+      } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscClean)) {
+        errs.ifscCode = 'Invalid IFSC format (e.g. HDFC0000123).'
+      }
+
+      if (!bankName.trim()) {
+        errs.bankName = 'Bank Name is required.'
+      }
+    }
+
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccess('')
+    
+    // Perform all validation checks
+    if (!validateForm()) {
+      toast('Please correct the validation errors in the form.', 'error')
+      return
+    }
+
     setLoading(true)
     try {
       if (isSignUp) {
         if (selectedRole !== 'investor') {
           throw new Error('Only Investors can register online.')
         }
-        const result = await signUpWithEmail(email, password, fullName)
+
+        const kycDetails = {
+          mobile_number: mobileNumber.trim(),
+          pan_number: panNumber.trim().toUpperCase(),
+          aadhaar_number: aadhaarNumber.trim().replace(/\s+/g, ''),
+          bank_account_holder: bankAccountHolder.trim(),
+          bank_account_number: bankAccountNumber.trim(),
+          ifsc_code: ifscCode.trim().toUpperCase(),
+          bank_name: bankName.trim(),
+        }
+
+        const result = await signUpWithEmail(email, password, fullName, kycDetails)
+        
         if (result === 'session') {
+          toast('Registration successful! Welcome aboard.', 'success')
           navigate('/dashboard')
         } else {
           setSuccess('Account created! Check your email to confirm, then sign in.')
+          toast('Account created! Please check your email to confirm.', 'success')
         }
       } else {
         await signInWithEmail(email, password)
-        // The AuthContext will set investor.role from the DB after sign-in.
-        // We use a short setTimeout to allow the auth state listener to settle
-        // and set the investor profile before we redirect.
+        toast('Logged in successfully.', 'success')
+        
         setTimeout(() => {
           const role = investor?.role
           if (role === 'branch_ambassador') {
@@ -53,13 +160,14 @@ export function LoginPage() {
           } else if (role === 'admin') {
             navigate('/admin/colleges')
           } else {
-            // default to investor — ProtectedRoute will correct if needed
             navigate('/dashboard')
           }
         }, 400)
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err))
+      const errMsg = getAuthErrorMessage(err)
+      setError(errMsg)
+      toast(errMsg, 'error')
     } finally {
       setLoading(false)
     }
@@ -69,7 +177,9 @@ export function LoginPage() {
     try {
       await signInWithGoogle()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed')
+      const errMsg = err instanceof Error ? err.message : 'Google sign-in failed'
+      setError(errMsg)
+      toast(errMsg, 'error')
     }
   }
 
@@ -178,10 +288,65 @@ export function LoginPage() {
           color: var(--green-d);
           opacity: 0.8;
         }
+
+        .auth-section-title {
+          font-family: 'Space Grotesk', sans-serif;
+          font-weight: 700;
+          font-size: 11px;
+          color: var(--ink);
+          margin-top: 1.25rem;
+          margin-bottom: 0.75rem;
+          padding-bottom: 0.25rem;
+          border-bottom: 1px solid var(--border);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .auth-form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+        }
+
+        @media (max-width: 600px) {
+          .auth-form-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .auth-field-group {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          margin-bottom: 0.5rem;
+        }
+
+        .auth-field-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: var(--gray);
+          margin-bottom: 4px;
+          text-align: left;
+        }
+
+        .field-error-msg {
+          font-size: 9px;
+          color: var(--red);
+          margin-top: 3px;
+          font-weight: 500;
+          text-align: left;
+        }
       `}</style>
 
       <div className="auth-page">
-        <div className="auth-card">
+        <div 
+          className="auth-card" 
+          style={{ 
+            maxWidth: isSignUp ? '550px' : '400px', 
+            transition: 'max-width 0.3s ease-in-out',
+            width: '100%'
+          }}
+        >
           <div className="auth-logo">
             <div className="sidebar-logo-dot" />
             <div>
@@ -252,18 +417,153 @@ export function LoginPage() {
           {error && <div className="auth-error">{error}</div>}
           {success && <div className="auth-error" style={{ background: 'var(--green-l)', color: 'var(--green-d)' }}>{success}</div>}
 
-          <form onSubmit={handleSubmit}>
-            {isSignUp && (
-              <input className="auth-input" placeholder="Full name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <form onSubmit={handleSubmit} style={{ marginTop: '1.25rem' }}>
+            {isSignUp ? (
+              <>
+                {/* Account Credentials */}
+                <div className="auth-section-title" style={{ marginTop: 0 }}>Account Credentials</div>
+                
+                <div className="auth-field-group">
+                  <span className="auth-field-label">Full Name</span>
+                  <input 
+                    className="auth-input" 
+                    placeholder="e.g. Ramesh Kumar" 
+                    autoComplete="name" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)} 
+                  />
+                  {errors.fullName && <span className="field-error-msg">{errors.fullName}</span>}
+                </div>
+
+                <div className="auth-form-grid">
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">Email Address</span>
+                    <input 
+                      className="auth-input" 
+                      type="email" 
+                      placeholder="e.g. ramesh@gmail.com" 
+                      autoComplete="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                    />
+                    {errors.email && <span className="field-error-msg">{errors.email}</span>}
+                  </div>
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">Password (min 6 chars)</span>
+                    <input 
+                      className="auth-input" 
+                      type="password" 
+                      placeholder="Password" 
+                      autoComplete="new-password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                    />
+                    {errors.password && <span className="field-error-msg">{errors.password}</span>}
+                  </div>
+                </div>
+
+                {/* KYC & Bank Details */}
+                <div className="auth-section-title">KYC & Bank Details</div>
+                
+                <div className="auth-form-grid">
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">KYC Mobile Number</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="exactly 10 digits" 
+                      value={mobileNumber} 
+                      onChange={(e) => setMobileNumber(e.target.value)} 
+                    />
+                    {errors.mobileNumber && <span className="field-error-msg">{errors.mobileNumber}</span>}
+                  </div>
+
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">PAN Number</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="e.g. ABCDE1234F" 
+                      value={panNumber} 
+                      onChange={(e) => setPanNumber(e.target.value)} 
+                    />
+                    {errors.panNumber && <span className="field-error-msg">{errors.panNumber}</span>}
+                  </div>
+
+                  <div className="auth-field-group" style={{ gridColumn: 'span 2' }}>
+                    <span className="auth-field-label">Aadhaar Card Number</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="exactly 12 digits" 
+                      value={aadhaarNumber} 
+                      onChange={(e) => setAadhaarNumber(e.target.value)} 
+                    />
+                    {errors.aadhaarNumber && <span className="field-error-msg">{errors.aadhaarNumber}</span>}
+                  </div>
+
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">Account Holder Name</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="e.g. Ramesh Kumar" 
+                      value={bankAccountHolder} 
+                      onChange={(e) => setBankAccountHolder(e.target.value)} 
+                    />
+                    {errors.bankAccountHolder && <span className="field-error-msg">{errors.bankAccountHolder}</span>}
+                  </div>
+
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">Bank Name</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="e.g. HDFC Bank" 
+                      value={bankName} 
+                      onChange={(e) => setBankName(e.target.value)} 
+                    />
+                    {errors.bankName && <span className="field-error-msg">{errors.bankName}</span>}
+                  </div>
+
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">Account Number</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="digits only" 
+                      value={bankAccountNumber} 
+                      onChange={(e) => setBankAccountNumber(e.target.value)} 
+                    />
+                    {errors.bankAccountNumber && <span className="field-error-msg">{errors.bankAccountNumber}</span>}
+                  </div>
+
+                  <div className="auth-field-group">
+                    <span className="auth-field-label">IFSC Code</span>
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="e.g. HDFC0000123" 
+                      value={ifscCode} 
+                      onChange={(e) => setIfscCode(e.target.value)} 
+                    />
+                    {errors.ifscCode && <span className="field-error-msg">{errors.ifscCode}</span>}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <input className="auth-input" type="email" placeholder="Email address" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input className="auth-input" type="password" placeholder="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+              </>
             )}
-            <input className="auth-input" type="email" placeholder="Email address" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <input className="auth-input" type="password" placeholder="Password" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-            <button className="auth-btn" type="submit" disabled={loading}>
+
+            <button className="auth-btn" type="submit" disabled={loading} style={{ marginTop: '1.25rem' }}>
               {loading ? 'Please wait...' : isSignUp ? 'Create account' : 'Sign in'}
             </button>
           </form>
 
-          {isSupabaseConfigured && selectedRole === 'investor' && (
+          {isSupabaseConfigured && selectedRole === 'investor' && !isSignUp && (
             <>
               <div className="auth-divider">or</div>
               <button className="auth-btn-outline" onClick={handleGoogle}>
@@ -287,7 +587,7 @@ export function LoginPage() {
 
           {selectedRole === 'investor' && (
             <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-              <span className="auth-link" onClick={() => { setIsSignUp(!isSignUp); }}>
+              <span className="auth-link" onClick={() => { setIsSignUp(!isSignUp); setErrors({}); setError(''); setSuccess(''); }}>
                 {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </span>
             </div>
