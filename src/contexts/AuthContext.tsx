@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { getInitials } from '@/lib/format'
-import type { Investor } from '@/types/database'
+import type { Investor, UserRole } from '@/types/database'
 
 export type SignUpResult = 'session' | 'confirm_email'
 
@@ -19,19 +19,14 @@ interface AuthContextType {
     email: string,
     password: string,
     fullName: string,
-    kycDetails?: {
-      mobile_number: string
-      pan_number: string
-      aadhaar_number: string
-      bank_account_holder: string
-      bank_account_number: string
-      ifsc_code: string
-      bank_name: string
-    }
+    phone?: string,
   ) => Promise<SignUpResult>
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   refreshInvestor: () => Promise<void>
+  checkEmailVerified: () => Promise<boolean>
+  updateInvestorProfile: (data: Record<string, unknown>) => Promise<void>
+  loginAsDemo: (role: UserRole) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -46,16 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     userId: string,
     email: string,
     fullName?: string,
-    kycDetails?: {
-      mobile_number: string
-      pan_number: string
-      aadhaar_number: string
-      bank_account_holder: string
-      bank_account_number: string
-      ifsc_code: string
-      bank_name: string
-    }
+    phone?: string,
   ) => {
+    if (!isSupabaseConfigured) return
+
     let { data: existing } = await supabase
       .from('decrypted_investors')
       .select('*')
@@ -65,23 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const name = fullName || email.split('@')[0]
 
     if (!existing) {
-      const insertPayload: any = {
+      const insertPayload: Record<string, unknown> = {
         user_id: userId,
         full_name: name,
         email,
         avatar_initials: getInitials(name),
       }
 
-      if (kycDetails) {
-        insertPayload.mobile_number = kycDetails.mobile_number
-        insertPayload.pan_number = kycDetails.pan_number
-        insertPayload.aadhaar_number = kycDetails.aadhaar_number
-        insertPayload.bank_account_holder = kycDetails.bank_account_holder
-        insertPayload.bank_account_number = kycDetails.bank_account_number
-        insertPayload.ifsc_code = kycDetails.ifsc_code
-        insertPayload.bank_name = kycDetails.bank_name
-        insertPayload.kyc_submitted_at = new Date().toISOString()
-        insertPayload.kyc_status = 'pending'
+      if (phone) {
+        insertPayload.mobile_number = phone
       }
 
       const { data: created, error } = await supabase
@@ -100,23 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (error) {
         console.warn('Could not create investor profile:', error.message)
       }
-    } else if (kycDetails && !existing.kyc_submitted_at) {
-      // Handle the case where auth trigger created basic profile but we have signup KYC details
-      const updatePayload: any = {
-        mobile_number: kycDetails.mobile_number,
-        pan_number: kycDetails.pan_number,
-        aadhaar_number: kycDetails.aadhaar_number,
-        bank_account_holder: kycDetails.bank_account_holder,
-        bank_account_number: kycDetails.bank_account_number,
-        ifsc_code: kycDetails.ifsc_code,
-        bank_name: kycDetails.bank_name,
-        kyc_submitted_at: new Date().toISOString(),
-        kyc_status: 'pending'
-      }
-
+    } else if (phone && !existing.mobile_number) {
+      // Profile was auto-created by trigger but doesn't have phone — update it
       const { data: updated, error } = await supabase
         .from('investors')
-        .update(updatePayload)
+        .update({ mobile_number: phone })
         .eq('user_id', userId)
         .select()
         .single()
@@ -129,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
         existing = decrypted as Investor
       } else if (error) {
-        console.warn('Could not update investor profile with KYC details:', error.message)
+        console.warn('Could not update investor phone:', error.message)
       }
     }
 
@@ -138,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const fetchInvestor = async (userId: string, email: string) => {
+    if (!isSupabaseConfigured) return
+
     let { data: investorData } = await supabase
       .from('decrypted_investors')
       .select('*')
@@ -163,6 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false)
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
       setUser(s?.user ?? null)
@@ -181,6 +157,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      // Mock login for demo mode
+      const mockUser = {
+        id: 'mock-investor-id',
+        email,
+        user_metadata: { full_name: 'Demo Investor' },
+      } as any
+      setUser(mockUser)
+      setInvestor({
+        id: 'mock-investor-profile-id',
+        user_id: 'mock-investor-id',
+        full_name: 'Demo Investor',
+        email,
+        phone: '9876543210',
+        role: 'investor',
+        profile_completed: false, // will enforce onboarding modal
+      } as any)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
   }
@@ -189,26 +185,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string, 
     password: string, 
     fullName: string,
-    kycDetails?: {
-      mobile_number: string
-      pan_number: string
-      aadhaar_number: string
-      bank_account_holder: string
-      bank_account_number: string
-      ifsc_code: string
-      bank_name: string
-    }
+    phone?: string,
   ): Promise<SignUpResult> => {
+    if (!isSupabaseConfigured) {
+      // Mock registration for demo mode
+      const mockUser = {
+        id: 'mock-investor-id',
+        email,
+        user_metadata: { full_name: fullName },
+      } as any
+      setUser(mockUser)
+      setInvestor({
+        id: 'mock-investor-profile-id',
+        user_id: 'mock-investor-id',
+        full_name: fullName,
+        email,
+        phone: phone || null,
+        role: 'investor',
+        profile_completed: false,
+      } as any)
+      return 'confirm_email'
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, phone } },
     })
     if (error) throw error
 
     if (data.user) {
-      await ensureInvestorProfile(data.user.id, email, fullName, kycDetails)
       if (data.session) {
+        // If there's an active session, it's safe to ensure profile
+        await ensureInvestorProfile(data.user.id, email, fullName, phone)
         return 'session'
       }
     }
@@ -217,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
+    if (!isSupabaseConfigured) return
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
@@ -225,10 +235,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut()
+    }
     setInvestor(null)
     setUser(null)
     setSession(null)
+  }
+
+  const checkEmailVerified = async (): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      return true // Auto-verify in demo mode
+    }
+
+    const { data: { user: freshUser }, error } = await supabase.auth.getUser()
+    if (error || !freshUser) return false
+    if (freshUser.email_confirmed_at) {
+      setUser(freshUser)
+      await fetchInvestor(freshUser.id, freshUser.email!)
+    }
+    return !!freshUser.email_confirmed_at
+  }
+
+  const updateInvestorProfile = async (data: Record<string, unknown>) => {
+    if (!isSupabaseConfigured) {
+      setInvestor(prev => prev ? { ...prev, ...data } as any : null)
+      return
+    }
+
+    if (!user) throw new Error('Not authenticated')
+    
+    const { error } = await supabase
+      .from('investors')
+      .update(data)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+
+    // Refresh the investor data
+    await fetchInvestor(user.id, user.email!)
+  }
+
+  const loginAsDemo = (role: UserRole) => {
+    const mockUser = {
+      id: `mock-${role}-id`,
+      email: `${role}@example.com`,
+      user_metadata: { full_name: `Demo ${role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}` }
+    } as any
+    setUser(mockUser)
+    setInvestor({
+      id: `mock-${role}-investor-id`,
+      user_id: `mock-${role}-id`,
+      full_name: `Demo ${role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
+      email: `${role}@example.com`,
+      phone: '9876543210',
+      role: role,
+      profile_completed: role === 'investor' ? false : true, // Enforce onboarding modal for investor
+    } as any)
   }
 
   return (
@@ -242,6 +305,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle,
       signOut,
       refreshInvestor,
+      checkEmailVerified,
+      updateInvestorProfile,
+      loginAsDemo,
     }}>
       {children}
     </AuthContext.Provider>

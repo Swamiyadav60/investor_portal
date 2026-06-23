@@ -84,7 +84,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             className="auth-link" 
             onClick={() => {
               onClose()
-              navigate('/login', { state: { isSignUp: true } })
+              navigate('/signup')
             }}
           >
             Don't have an account? Sign up

@@ -55,9 +55,9 @@ export function PublicNavbar() {
           {investor ? (
             <button className="public-nav-btn-primary" onClick={() => navigate('/dashboard')}>Go to Dashboard</button>
           ) : (
-            <>
+              <>
               <Link to="/login" className="public-nav-btn-outline">Login</Link>
-              <Link to="/login" className="public-nav-btn-primary" state={{ isSignUp: true }}>Sign Up</Link>
+              <Link to="/signup" className="public-nav-btn-primary">Sign Up</Link>
             </>
           )}
         </div>
@@ -92,7 +92,7 @@ export function PublicNavbar() {
               ) : (
                 <>
                   <Link to="/login" className="public-nav-btn-outline mobile-full-width text-center" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
-                  <Link to="/login" className="public-nav-btn-primary mobile-full-width text-center" state={{ isSignUp: true }} onClick={() => setIsMobileMenuOpen(false)}>Sign Up</Link>
+                  <Link to="/signup" className="public-nav-btn-primary mobile-full-width text-center" onClick={() => setIsMobileMenuOpen(false)}>Sign Up</Link>
                 </>
               )}
             </div>

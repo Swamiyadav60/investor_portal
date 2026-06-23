@@ -45,7 +45,7 @@ export interface Investor {
   notification_prefs: NotificationPrefs
   created_at: string
   updated_at: string
-  // New KYC and Bank columns
+  // KYC and Bank columns (from migration 012)
   mobile_number: string | null
   pan_number: string | null
   aadhaar_number: string | null
@@ -53,7 +53,54 @@ export interface Investor {
   bank_account_number: string | null
   ifsc_code: string | null
   kyc_submitted_at: string | null
+  // Profile completion columns (from migration 013)
+  dob: string | null
+  address: string | null
+  state: string | null
+  pincode: string | null
+  kyc_completed: boolean
+  bank_completed: boolean
+  profile_completed: boolean
 }
+
+// --- Signup Flow Interfaces ---
+
+export interface SignupFormData {
+  fullName: string
+  email: string
+  phone: string
+  password: string
+  confirmPassword: string
+}
+
+export interface KycFormData {
+  panNumber: string
+  aadhaarNumber: string
+  dob: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+}
+
+export interface BankFormData {
+  accountHolderName: string
+  bankName: string
+  accountNumber: string
+  confirmAccountNumber: string
+  ifscCode: string
+  upiId: string
+}
+
+export interface OnboardingFormData {
+  fullName: string
+  email: string
+  phone: string
+  kyc: KycFormData
+  bank: BankFormData
+}
+
+// --- Existing Interfaces (unchanged) ---
 
 export interface College {
   id: string

@@ -5838,3 +5838,421 @@ body {
   height: 100% !important;
   object-fit: cover;
 }
+
+/* ==========================================
+   SIGNUP, VERIFICATION & ONBOARDING STYLES
+   ========================================== */
+
+/* Signup Layout */
+.signup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 2rem 1.5rem;
+}
+
+.signup-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.signup-form {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.signup-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.signup-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.signup-required {
+  color: var(--red);
+}
+
+.signup-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.signup-input-icon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--gray);
+  pointer-events: none;
+}
+
+.signup-input {
+  padding-left: 36px !important;
+  margin-bottom: 0 !important;
+}
+
+.signup-error-msg {
+  font-size: 10px;
+  color: var(--red);
+  margin-top: 4px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.input-error {
+  border-color: var(--red) !important;
+  background: rgba(234, 67, 53, 0.01);
+}
+
+.input-error:focus {
+  border-color: var(--red) !important;
+}
+
+/* Email Verification Modal styles */
+.verification-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.verification-icon-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1.5rem 0 2rem 0;
+}
+
+.mail-icon-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--green-l);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-d);
+}
+
+.mail-svg {
+  width: 32px;
+  height: 32px;
+}
+
+.verification-text {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.6;
+  margin: 1rem 0 1.5rem 0;
+}
+
+.verification-email {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.verification-actions {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.5rem;
+}
+
+/* Onboarding Modal styles */
+.onboarding-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 92%;
+  margin: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  transition: max-width 0.3s ease-in-out;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-header .auth-logo {
+  margin-bottom: 0 !important;
+}
+
+.onboarding-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.2s;
+}
+
+.onboarding-logout-btn:hover {
+  background: var(--gray-l);
+  color: var(--ink);
+  border-color: #A0A09A;
+}
+
+/* Stepper UI */
+.onboarding-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 1.75rem 0 2rem 0;
+}
+
+.onboarding-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.step-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.onboarding-step.active .step-number {
+  border-color: var(--green);
+  background: var(--green-l);
+  color: var(--green-d);
+}
+
+.onboarding-step.active .step-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.onboarding-step.completed .step-number {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--white);
+}
+
+.onboarding-step-line-wrap {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 12px;
+  position: relative;
+  top: -10px; /* offset label gap */
+}
+
+.onboarding-step-line {
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  transition: width 0.3s ease-in-out;
+}
+
+.onboarding-step-line.filled {
+  width: 100%;
+}
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.onboarding-divider {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--ink);
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 580px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .onboarding-card {
+    padding: 1.5rem;
+  }
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 1.5rem;
+}
+
+.onboarding-actions .auth-btn {
+  width: auto;
+  min-width: 120px;
+  margin-bottom: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-actions .auth-btn-outline {
+  width: auto;
+  min-width: 100px;
+}
+
+/* Success & Checkmark Animations */
+.onboarding-success {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.onboarding-success h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 1.25rem 0 0.5rem 0;
+}
+
+.onboarding-success p {
+  font-size: 13px;
+  color: var(--gray);
+}
+
+.success-checkmark-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--green-l);
+  box-shadow: 0 4px 12px rgba(26, 155, 108, 0.1);
+  padding: 14px;
+}
+
+.checkmark-svg {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 3.5;
+  stroke: var(--green);
+  stroke-miterlimit: 10;
+  box-shadow: inset 0px 0px 0px var(--green);
+  animation: fill-checkmark .4s ease-in-out .4s forwards, scale-checkmark .3s ease-in-out .9s forwards;
+}
+
+.checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3.5;
+  stroke-miterlimit: 10;
+  stroke: var(--green);
+  fill: none;
+  animation: stroke-checkmark 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke-checkmark 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+}
+
+@keyframes stroke-checkmark {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scale-checkmark {
+  0%, 100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+@keyframes fill-checkmark {
+  100% {
+    box-shadow: inset 0px 0px 0px 30px var(--green-l);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s infinite ease-in-out;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.95;
+  }
+}

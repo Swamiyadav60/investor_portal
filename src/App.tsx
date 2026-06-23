@@ -8,6 +8,7 @@ import { InvestorLayout } from '@/components/layout/InvestorLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { BranchAmbassadorLayout } from '@/components/layout/BranchAmbassadorLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { SignupPage } from '@/pages/auth/SignupPage'
 import { LandingPage } from '@/pages/public/LandingPage'
 import { LocationsPage } from '@/pages/public/LocationsPage'
 import { DashboardPage } from '@/pages/investor/DashboardPage'
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+            <Route path="/signup" element={<GuestRoute><SignupPage /></GuestRoute>} />
 
             <Route element={<ProtectedRoute allowedRoles={['investor']}><InvestorLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
