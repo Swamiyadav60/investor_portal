@@ -22,6 +22,7 @@ export function DashboardPage() {
   const {
   data: chartData
 } = useChartData(
+  investor?.id,
   kioskId,
   graphInterval,
   graphMetric

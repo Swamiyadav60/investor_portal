@@ -2,17 +2,9 @@ import { useState, useEffect } from 'react'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import type { NotificationPrefs } from '@/types/database'
 import { useToast } from '@/components/ui/Toast'
 import { maskPan, maskAadhaar, maskBankAccount } from '@/lib/format'
 
-const NOTIF_LABELS: { key: keyof NotificationPrefs; label: string; sub: string }[] = [
-  { key: 'job_alerts', label: 'Job completed alerts', sub: 'Notify on every print job' },
-  { key: 'daily_summary', label: 'Daily summary', sub: 'End-of-day earnings digest' },
-  { key: 'monthly_payout', label: 'Monthly payout', sub: 'When payout is processed' },
-  { key: 'maintenance_alerts', label: 'Maintenance alerts', sub: 'Ink / paper low warnings' },
-  { key: 'new_slots', label: 'New slot availability', sub: 'Open investment slots nearby' },
-]
 
 export function ProfilePage() {
   const { investor, refreshInvestor } = useAuth()
@@ -24,12 +16,6 @@ export function ProfilePage() {
     gst: investor?.gst || 'Not added',
     upi_id: investor?.upi_id || '',
   })
-  const [prefs, setPrefs] = useState<NotificationPrefs>(
-    investor?.notification_prefs || {
-      job_alerts: false, daily_summary: true,
-      monthly_payout: true, maintenance_alerts: true, new_slots: false,
-    }
-  )
 
   useEffect(() => {
     if (investor) {
@@ -38,10 +24,6 @@ export function ProfilePage() {
         city: investor.city || '',
         gst: investor.gst || 'Not added',
         upi_id: investor.upi_id || '',
-      })
-      setPrefs(investor.notification_prefs || {
-        job_alerts: false, daily_summary: true,
-        monthly_payout: true, maintenance_alerts: true, new_slots: false,
       })
     }
   }, [investor])
@@ -62,7 +44,6 @@ export function ProfilePage() {
         city: form.city,
         gst: form.gst,
         upi_id: form.upi_id,
-        notification_prefs: prefs,
       }
 
       const { error } = await supabase
@@ -241,35 +222,6 @@ export function ProfilePage() {
               <button className="prof-save-btn" onClick={handleSave} style={{ marginTop: '1rem' }}>
                 Save changes
               </button>
-            )}
-          </div>
-
-          {/* 4. Notification preferences */}
-          <div className="rpt-card">
-            <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
-              <div className="rpt-card-title">Notification preferences</div>
-            </div>
-            {NOTIF_LABELS.map((n) => (
-              <div key={n.key} className="notif-row">
-                <div>
-                  <div className="notif-label">{n.label}</div>
-                  <div className="notif-sub">{n.sub}</div>
-                </div>
-                <label className="toggle-wrap">
-                  <input
-                    type="checkbox"
-                    checked={prefs[n.key]}
-                    onChange={(e) => setPrefs({ ...prefs, [n.key]: e.target.checked })}
-                    disabled={!editing}
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-            ))}
-            {!editing && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--gray)', marginTop: '0.75rem' }}>
-                Click 'Edit' in Contact & Preferences to change notifications.
-              </div>
             )}
           </div>
 

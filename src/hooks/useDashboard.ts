@@ -194,6 +194,7 @@ async function fetchLiveStats(
 // ─── Chart data ────────────────────────────────────────────────────────────────
 
 export function useChartData(
+  investorId: string | undefined,
   kioskId: string,
   interval: 'monthly' | 'weekly',
   metric: 'revenue' | 'profit'
@@ -201,6 +202,21 @@ export function useChartData(
   return useQuery({
     queryKey: ['chart-data', kioskId, interval, metric],
     queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from('investor_kiosks')
+        .select('kiosk_id')
+        .eq('investor_id', investorId)
+        .eq('status', 'active')
+
+      const kioskIds = assignments?.map(a => a.kiosk_id) || []
+
+      if (!kioskIds.length) {
+        return {
+          values: [],
+          labels: [],
+          label: metric === 'revenue' ? 'Revenue' : 'Profit',
+        }
+      }
       let revenueQuery = supabase
         .from('revenues')
         .select('amount, period_start, kiosk_id')
@@ -210,7 +226,9 @@ export function useChartData(
         .from('expenses')
         .select('amount, expense_type, period_start, kiosk_id')
         .eq('status', 'approved')
-
+      revenueQuery = revenueQuery.in('kiosk_id', kioskIds)
+      expenseQuery = expenseQuery.in('kiosk_id', kioskIds)
+      
       if (kioskId !== 'all') {
         revenueQuery = revenueQuery.eq('kiosk_id', kioskId)
         expenseQuery = expenseQuery.eq('kiosk_id', kioskId)
