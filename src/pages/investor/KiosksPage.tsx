@@ -6,13 +6,17 @@ import { fmt } from '@/lib/format'
 import { initiatePayment } from '@/lib/razorpay'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
 
 export function KiosksPage() {
   const [slotFilter, setSlotFilter] = useState('all')
+  const [selectedCollege, setSelectedCollege] = useState<any>(null)
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false)
   const navigate = useNavigate()
   const { investor } = useAuth()
+  const queryClient = useQueryClient()
   const { data: activeKiosks = [] } = useQuery({
   queryKey: ['my-kiosks', investor?.id],
   enabled: !!investor?.id,
@@ -80,6 +84,21 @@ const { data: colleges = [] } = useQuery({
   }
 })
 
+const { data: myWaitlists = [] } = useQuery({
+  queryKey: ['waitlists', investor?.id],
+  enabled: !!investor?.id,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('waitlists')
+      .select('college_id')
+      .eq('investor_id', investor!.id)
+      .neq('status', 'rejected')
+    
+    if (error) throw error
+    return data || []
+  }
+})
+
 
  const filtered =
   (slotFilter === 'all'
@@ -87,19 +106,21 @@ const { data: colleges = [] } = useQuery({
     : colleges.filter(c => c.type === slotFilter)
   )
   .filter(c => c.slots_taken < c.slots_total)
-  const handleInvest = async (college: any) => {
-    try {
-      await initiatePayment({
-        amount: college.investment_amount,
-        description: `Investment in ${college.name}`,
-        name: investor?.full_name || '',
-        email: investor?.email || '',
-        phone: investor?.phone || undefined,
-        onSuccess: () => toast(`Investment in ${college.name} confirmed!`, 'success'),
-      })
-    } catch {
-      toast('Payment gateway not configured. Set VITE_RAZORPAY_KEY_ID in .env', 'error')
+  const handleInvest = (college: any) => {
+    const alreadyReserved = myWaitlists.some((w: any) => w.college_id === college.id)
+    if (alreadyReserved) {
+      toast('You are already on the waitlist for this college', 'info')
+      return
     }
+    setSelectedCollege(college)
+    setShowWaitlistModal(true)
+  }
+
+  const handleReserveSuccess = () => {
+    setShowWaitlistModal(false)
+    toast("You've been added to the waitlist!", 'success')
+    queryClient.invalidateQueries({ queryKey: ['waitlists'] })
+    navigate('/waitlist')
   }
   
 
@@ -280,6 +301,15 @@ const { data: colleges = [] } = useQuery({
           })}
         </div>
       </div>
+
+      {selectedCollege && (
+        <InvestorWaitlistModal
+          college={selectedCollege}
+          isOpen={showWaitlistModal}
+          onClose={() => setShowWaitlistModal(false)}
+          onSuccess={handleReserveSuccess}
+        />
+      )}
     </>
   )
 }
