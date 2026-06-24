@@ -11,12 +11,11 @@ interface TopbarProps {
   onKioskChange?: (id: string) => void
   period?: 'monthly' | 'weekly'
   onPeriodChange?: (p: 'monthly' | 'weekly') => void
-  nextPayout?: string
 }
 
 export function Topbar({
   
-  title, showFilters, kioskId, onKioskChange, period, onPeriodChange, nextPayout = 'Jul 1',
+  title, showFilters, kioskId, onKioskChange, period, onPeriodChange,
 }: TopbarProps) {
  
 const { investor } = useAuth()
