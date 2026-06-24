@@ -7,6 +7,13 @@ import { useToast } from '@/components/ui/Toast'
 export function AdminKiosksPage() {
   const [showAssign, setShowAssign] = useState<string | null>(null)
   const [assignType, setAssignType] = useState<'investor' | 'ambassador'>('investor')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newKioskName, setNewKioskName] = useState('')
+  const [newKioskLocation, setNewKioskLocation] = useState('')
+  const [newKioskCollegeId, setNewKioskCollegeId] = useState('')
+  const [newKioskStatus, setNewKioskStatus] = useState<'active'|'pending'>('pending')
+  const [newKioskInvestorId, setNewKioskInvestorId] = useState('')
+  const [newKioskAmbassadorId, setNewKioskAmbassadorId] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -46,6 +53,58 @@ export function AdminKiosksPage() {
 
   return data || []
 }
+  })
+
+  const { data: colleges = [] } = useQuery({
+    queryKey: ['admin-colleges-simple'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('colleges').select('id, name').order('name')
+      if (error) throw error
+      return data || []
+    }
+  })
+
+  const addKioskMutation = useMutation({
+    mutationFn: async () => {
+      const { data: kiosk, error: kioskError } = await supabase
+        .from('kiosks')
+        .insert({
+          name: newKioskName,
+          location: newKioskLocation,
+          college_id: newKioskCollegeId || null,
+          status: newKioskStatus,
+          branch_ambassador_id: newKioskAmbassadorId || null
+        })
+        .select('id')
+        .single()
+
+      if (kioskError) throw kioskError
+
+      if (newKioskInvestorId) {
+        const { error: invError } = await supabase
+          .from('investor_kiosks')
+          .insert({
+            kiosk_id: kiosk.id,
+            investor_id: newKioskInvestorId,
+            status: 'active'
+          })
+        if (invError) throw invError
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-kiosks'] })
+      toast('Kiosk created successfully.', 'success')
+      setShowAddModal(false)
+      setNewKioskName('')
+      setNewKioskLocation('')
+      setNewKioskCollegeId('')
+      setNewKioskStatus('pending')
+      setNewKioskInvestorId('')
+      setNewKioskAmbassadorId('')
+    },
+    onError: (err: any) => {
+      toast(err.message || 'Error creating kiosk.', 'error')
+    }
   })
 
   const assignMutation = useMutation({
@@ -106,7 +165,7 @@ export function AdminKiosksPage() {
             <div className="section-heading">Manage kiosks</div>
             <div className="section-heading-sub">{kiosks.length} kiosks registered</div>
           </div>
-          <button className="admin-btn admin-btn-primary" onClick={() => toast('Database action not implemented in UI yet.', 'info')}>+ Add Kiosk</button>
+          <button className="admin-btn admin-btn-primary" onClick={() => setShowAddModal(true)}>+ Add Kiosk</button>
         </div>
 
         <div className="rpt-card">
@@ -209,6 +268,107 @@ export function AdminKiosksPage() {
                   className="admin-btn admin-btn-secondary" 
                   onClick={() => setShowAssign(null)}
                   disabled={assignMutation.isPending}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAddModal && (
+          <div className="admin-modal-overlay" onClick={() => setShowAddModal(false)}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+              <div className="rpt-card-title" style={{ marginBottom: '1.25rem' }}>Add New Kiosk</div>
+              
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label className="admin-form-label">Name</label>
+                <input 
+                  type="text"
+                  className="admin-form-input"
+                  value={newKioskName}
+                  onChange={(e) => setNewKioskName(e.target.value)}
+                  placeholder="e.g. Kiosk Alpha"
+                />
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label className="admin-form-label">Location</label>
+                <input 
+                  type="text"
+                  className="admin-form-input"
+                  value={newKioskLocation}
+                  onChange={(e) => setNewKioskLocation(e.target.value)}
+                  placeholder="e.g. Library 1st Floor"
+                />
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label className="admin-form-label">Campus / College</label>
+                <select 
+                  className="admin-form-input"
+                  value={newKioskCollegeId}
+                  onChange={(e) => setNewKioskCollegeId(e.target.value)}
+                >
+                  <option value="">-- None --</option>
+                  {colleges.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label className="admin-form-label">Status</label>
+                <select 
+                  className="admin-form-input"
+                  value={newKioskStatus}
+                  onChange={(e) => setNewKioskStatus(e.target.value as 'active'|'pending')}
+                >
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                <label className="admin-form-label">Assigned Investor</label>
+                <select 
+                  className="admin-form-input"
+                  value={newKioskInvestorId}
+                  onChange={(e) => setNewKioskInvestorId(e.target.value)}
+                >
+                  <option value="">-- None --</option>
+                  {users.filter(u => u.role === 'investor').map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="admin-form-label">Branch Ambassador</label>
+                <select 
+                  className="admin-form-input"
+                  value={newKioskAmbassadorId}
+                  onChange={(e) => setNewKioskAmbassadorId(e.target.value)}
+                >
+                  <option value="">-- None --</option>
+                  {users.filter(u => u.role === 'branch_ambassador').map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '.5rem' }}>
+                <button 
+                  className="admin-btn admin-btn-primary" 
+                  onClick={() => addKioskMutation.mutate()}
+                  disabled={!newKioskName || !newKioskLocation || addKioskMutation.isPending}
+                >
+                  {addKioskMutation.isPending ? 'Adding...' : 'Add Kiosk'}
+                </button>
+                <button 
+                  className="admin-btn admin-btn-secondary" 
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addKioskMutation.isPending}
                 >
                   Cancel
                 </button>

@@ -10,6 +10,8 @@ export function ProfilePage() {
   const { investor, refreshInvestor } = useAuth()
   const { toast } = useToast()
   const [editing, setEditing] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [showCloseAccountModal, setShowCloseAccountModal] = useState(false)
   const [form, setForm] = useState({
     phone: investor?.phone || '',
     city: investor?.city || '',
@@ -233,10 +235,10 @@ export function ProfilePage() {
             Account actions
           </div>
           <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
-            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>
+            <button className="danger-btn" onClick={() => setShowTransferModal(true)}>
               Request slot transfer
             </button>
-            <button className="danger-btn" onClick={() => toast('Support team will contact you.', 'info')}>
+            <button className="danger-btn" onClick={() => setShowCloseAccountModal(true)}>
               Close investor account
             </button>
           </div>
@@ -246,6 +248,91 @@ export function ProfilePage() {
         </div>
 
       </div>
+
+      {showTransferModal && (
+        <div className="admin-modal-overlay" onClick={() => setShowTransferModal(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <div className="rpt-card-title" style={{ marginBottom: '1rem' }}>Request Slot Transfer</div>
+            <div style={{ color: 'var(--gray)', fontSize: '14px', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              To initiate a slot transfer, please contact our support team. We'll verify your request and guide you through the process.
+            </div>
+            
+            <div style={{ padding: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ fontSize: '24px' }}>📞</div>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>+91 81436 32036</div>
+                <div style={{ fontSize: '13px', color: 'var(--gray)' }}>Smart Printer Support</div>
+                <div style={{ fontSize: '12px', color: 'var(--gray)', marginTop: '2px' }}>Mon – Sat, 10am – 6pm</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a 
+                href="tel:+918143632036" 
+                className="public-nav-btn-primary" 
+                style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%', boxSizing: 'border-box' }}
+              >
+                Call Now
+              </a>
+              <button 
+                className="admin-btn admin-btn-secondary" 
+                onClick={() => setShowTransferModal(false)}
+                style={{ width: '100%' }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--gray)', marginTop: '1rem' }}>
+              You can also WhatsApp us on the same number.
+            </div>
+          </div>
+        </div>
+      )}
+      {showCloseAccountModal && (
+        <div className="admin-modal-overlay" onClick={() => setShowCloseAccountModal(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <div className="rpt-card-title" style={{ marginBottom: '1rem' }}>Close Investor Account</div>
+            <div style={{ color: 'var(--gray)', fontSize: '14px', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              Closing your account is a permanent action and requires manual verification by our team. Please contact us directly to proceed.
+            </div>
+            
+            <div style={{ padding: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ fontSize: '24px' }}>📞</div>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>+91 81436 32036</div>
+                <div style={{ fontSize: '13px', color: 'var(--gray)' }}>Smart Printer Support</div>
+                <div style={{ fontSize: '12px', color: 'var(--gray)', marginTop: '2px' }}>Mon – Sat, 10am – 6pm</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a 
+                href="tel:+918143632036" 
+                className="public-nav-btn-primary" 
+                style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%', boxSizing: 'border-box' }}
+              >
+                Call Now
+              </a>
+              <button 
+                className="admin-btn admin-btn-secondary" 
+                onClick={() => setShowCloseAccountModal(false)}
+                style={{ width: '100%' }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--red)', marginTop: '1.25rem', fontWeight: 500, background: '#fee2e2', padding: '0.5rem', borderRadius: '4px' }}>
+              ⚠️ This action is irreversible. Our team will verify your identity before processing the request.
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--gray)', marginTop: '1rem' }}>
+              You can also WhatsApp us on the same number.
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
