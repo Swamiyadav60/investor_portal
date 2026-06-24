@@ -77,7 +77,7 @@ export function Sidebar({ admin = false }: { admin?: boolean }) {
 )}
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
       
-      <Link to="/" className="sidebar-logo">
+      <Link to="/" className="sidebar-logo" title="Back to Home" style={{ cursor: 'pointer' }}>
         <div className="sidebar-logo-dot" />
         <div>
           <div className="sidebar-logo-text">Smart Printer</div>

@@ -2,6 +2,7 @@ import { ToggleGroup } from '@/components/ui/ToggleGroup'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 interface TopbarProps {
   title: string
@@ -19,6 +20,7 @@ export function Topbar({
 }: TopbarProps) {
  
 const { investor } = useAuth()
+const navigate = useNavigate()
 const { data: kiosks = [] } = useQuery({
   queryKey: ['investor-kiosks', investor?.id],
   enabled: !!investor?.id,
@@ -85,10 +87,9 @@ const { data: kiosks = [] } = useQuery({
             className="period-toggle"
           />
         )}
-        <div className="payout-badge">
-          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-          Next payout: {nextPayout}
-        </div>
+        <button className="public-nav-btn-primary" onClick={() => navigate('/')}>
+          Go to Home
+        </button>
       </div>
     </div>
   )
