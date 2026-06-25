@@ -109,37 +109,61 @@ export function AdminKiosksPage() {
 
   const assignMutation = useMutation({
     mutationFn: async ({ kioskId, userId }: { kioskId: string; userId: string }) => {
-      
 
-      if (assignType === 'ambassador') {
-        // Update kiosks table branch_ambassador_id
-        const { error } = await supabase
+      // Remove assignment
+      if (userId === 'unassign') {
+
+        if (assignType === 'ambassador') {
+          const { error } = await supabase
           .from('kiosks')
-          .update({ branch_ambassador_id: userId })
+          .update({ branch_ambassador_id: null })
           .eq('id', kioskId)
+
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+          .from('investor_kiosks')
+          .delete()
+          .eq('kiosk_id', kioskId)
+
+          if (error) throw error
+        }
+
+        return
+      }
+
+      // Normal assignment
+      if (assignType === 'ambassador') {
+        const { error } = await supabase
+        .from('kiosks')
+        .update({ branch_ambassador_id: userId })
+        .eq('id', kioskId)
 
         if (error) throw error
       } else {
-        // Insert into investor_kiosks
         const { error } = await supabase
-          .from('investor_kiosks')
-          .insert({
-            kiosk_id: kioskId,
-            investor_id: userId,
-            status: 'active'
-          })
+        .from('investor_kiosks')
+        .insert({
+          kiosk_id: kioskId,
+          investor_id: userId,
+          status: 'active'
+        })
 
         if (error) throw error
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-kiosks'] })
-      toast('Kiosk assignment saved successfully.', 'success')
-      setShowAssign(null)
-      setSelectedUserId('')
+    onSuccess: async () => {
+      await queryClient.refetchQueries({
+        queryKey: ['admin-kiosks'],
+      });
+
+      setShowAssign(null);
+      setSelectedUserId('');
+      toast('Kiosk assignment saved successfully.', 'success');
     },
+
     onError: (err: any) => {
-      toast(err.message || 'Error assigning kiosk.', 'error')
+      toast(err.message || 'Error assigning kiosk.', 'error');
     }
   })
 
@@ -250,6 +274,9 @@ export function AdminKiosksPage() {
                   onChange={(e) => setSelectedUserId(e.target.value)}
                 >
                   <option value="">-- Select {assignType === 'ambassador' ? 'Ambassador' : 'Investor'} --</option>
+                  <option value="unassign">
+                    Not Assigned
+                  </option>
                   {filteredUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                   ))}

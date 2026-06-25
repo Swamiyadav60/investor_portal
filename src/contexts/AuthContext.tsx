@@ -152,8 +152,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (s?.user) fetchInvestor(s.user.id, s.user.email!)
       else setInvestor(null)
     })
+    let investorSubscription: any = null;
 
-    return () => subscription.unsubscribe()
+    if (user) {
+      investorSubscription = supabase
+      .channel(`investor-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'investors',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async () => {
+          await fetchInvestor(user.id, user.email!);
+        }
+      )
+      .subscribe();
+    }
+
+    return () => {
+      subscription.unsubscribe();
+
+      if (investorSubscription) {
+        supabase.removeChannel(investorSubscription);
+      }
+    };
   }, [])
 
   const signInWithEmail = async (email: string, password: string) => {

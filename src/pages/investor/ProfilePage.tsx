@@ -79,12 +79,26 @@ export function ProfilePage() {
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Verified Personal Information</div>
-              <span className="kyc-badge verified" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                    className={`kyc-badge ${
+                    investor?.kyc_status === 'verified'
+                    ? 'verified'
+                    : investor?.kyc_status === 'rejected'
+                    ? 'rejected'
+                    : 'pending'
+                  }`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                Verified Information
+
+               {investor?.kyc_status === 'verified'
+                ? 'Verified Information'
+                : investor?.kyc_status === 'rejected'
+                ? 'KYC Rejected'
+                : 'KYC Pending'}
               </span>
             </div>
             
@@ -121,13 +135,26 @@ export function ProfilePage() {
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Verified Bank Information</div>
-              <span className="kyc-badge verified" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                Verified Information
-              </span>
+              <span className={`kyc-badge ${
+                investor?.kyc_status === 'verified'
+                ? 'verified'
+                : investor?.kyc_status === 'rejected'
+                ? 'rejected'
+                : 'pending'
+              }`}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+
+              {investor?.kyc_status === 'verified'
+              ? 'Verified Information'
+              : investor?.kyc_status === 'rejected'
+              ? 'KYC Rejected'
+              : 'KYC Pending'}
+            </span>
             </div>
 
             <div className="bank-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '4px', marginBottom: '0.75rem' }}>
