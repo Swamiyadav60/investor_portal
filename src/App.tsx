@@ -28,6 +28,7 @@ import { AdminKiosksPage } from '@/pages/admin/AdminKiosksPage'
 import { AdminInstallationsPage } from '@/pages/admin/AdminInstallationsPage'
 import { AdminRevenuePage } from '@/pages/admin/AdminRevenuePage'
 import { AdminExpensesPage } from '@/pages/admin/AdminExpensesPage'
+import { AdminExpenseCatalogPage } from '@/pages/admin/AdminExpenseCatalogPage'
 import { AdminWaitlistsPage } from '@/pages/admin/AdminWaitlistsPage'
 import { AdminPaymentsPage } from '@/pages/admin/AdminPaymentsPage'
 import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage'
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/admin/installations" element={<AdminInstallationsPage />} />
               <Route path="/admin/revenue" element={<AdminRevenuePage />} />
               <Route path="/admin/expenses" element={<AdminExpensesPage />} />
+              <Route path="/admin/expense-catalog" element={<AdminExpenseCatalogPage />} />
               <Route path="/admin/waitlists" element={<AdminWaitlistsPage />} />
               <Route path="/admin/payments" element={<AdminPaymentsPage />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />

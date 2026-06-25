@@ -22,9 +22,12 @@ interface ExpenseRow {
   rejected_at: string | null
   rejection_reason: string | null
   admin_remarks: string | null
+  expense_name: string | null
+  expense_catalog_id: string | null
   kiosk: { id: string; name: string; location: string } | null
   submitted_by_inv: { id: string; full_name: string } | null
   approved_by_inv: { id: string; full_name: string } | null
+  catalog_item?: { id: string; name: string; default_amount: number; expense_mode: 'fixed' | 'custom' } | null
 }
 
 // ─── Helper: status badge ────────────────────────────────────────────────────
@@ -64,12 +67,12 @@ export function AdminExpensesPage() {
   const [rejectReason, setRejectReason] = useState('')
 
   // ── Summary counts (all statuses, single query) ───────────────────────────
-  const { data: allCounts = { pending: 0, approved: 0, rejected: 0, totalPending: 0 } } = useQuery({
+  const { data: allCounts = { pending: 0, approved: 0, rejected: 0, totalPending: 0, totalApproved: 0, totalRejected: 0, rows: [] } } = useQuery({
     queryKey: ['admin-expense-counts'],
     queryFn: async () => {
       const { data } = await supabase
         .from('expenses')
-        .select('status, amount')
+        .select('status, amount, category, expense_name')
       const rows = data || []
       return {
         pending:      rows.filter(r => r.status === 'pending').length,
@@ -78,6 +81,13 @@ export function AdminExpensesPage() {
         totalPending: rows
           .filter(r => r.status === 'pending')
           .reduce((s: number, r: any) => s + Number(r.amount), 0),
+        totalApproved: rows
+          .filter(r => r.status === 'approved')
+          .reduce((s: number, r: any) => s + Number(r.amount), 0),
+        totalRejected: rows
+          .filter(r => r.status === 'rejected')
+          .reduce((s: number, r: any) => s + Number(r.amount), 0),
+        rows: rows
       }
     },
   })
@@ -91,9 +101,11 @@ export function AdminExpensesPage() {
         .select(`
           id, created_at, category, expense_type, amount, notes, bill_url,
           status, approved_at, rejected_at, rejection_reason, admin_remarks,
+          expense_name, expense_catalog_id,
           kiosk:kiosks(id, name, location),
           submitted_by_inv:investors!expenses_submitted_by_fkey(id, full_name),
-          approved_by_inv:investors!expenses_approved_by_fkey(id, full_name)
+          approved_by_inv:investors!expenses_approved_by_fkey(id, full_name),
+          catalog_item:expense_catalog_id(id, name, default_amount, expense_mode)
         `)
         .eq('status', tab)
         .order('created_at', { ascending: false })
@@ -111,11 +123,43 @@ export function AdminExpensesPage() {
           approved_by_inv:  null,
         })) as unknown as ExpenseRow[]
       }
-      // Supabase types joined relations as arrays; runtime returns single objects — safe cast
       return (data || []) as unknown as ExpenseRow[]
     },
   })
 
+  // ── Category Breakdown ──────────────────────────────────────────────────
+  const categoryBreakdown = useMemo(() => {
+    if (!allCounts.rows) return []
+    const approvedRows = allCounts.rows.filter((r: any) => r.status === 'approved')
+    const totalApproved = allCounts.totalApproved
+    if (totalApproved === 0) return []
+
+    const groupings: Record<string, number> = {}
+    approvedRows.forEach((r: any) => {
+      const cat = r.expense_name || r.category || 'Other'
+      groupings[cat] = (groupings[cat] || 0) + Number(r.amount)
+    })
+
+    const colors = [
+      '#f97316', // Orange (Paper)
+      '#3b82f6', // Blue (Ink/Toner)
+      '#10b981', // Green (Maintenance)
+      '#a855f7', // Purple (Drum)
+      '#ec4899', // Pink (Rent)
+      '#eab308', // Yellow (Power)
+      '#14b8a6', // Teal (Staff)
+      '#6b7280', // Gray (Insurance)
+    ]
+
+    return Object.entries(groupings)
+      .map(([name, amount], idx) => ({
+        name,
+        amount,
+        pct: (amount / totalApproved) * 100,
+        color: colors[idx % colors.length]
+      }))
+      .sort((a, b) => b.amount - a.amount)
+  }, [allCounts])
 
   // ── All colleges (for filter dropdown) ───────────────────────────────────
   const colleges = useMemo(() => {
@@ -196,29 +240,62 @@ export function AdminExpensesPage() {
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <Topbar title="Expense Approval Center" />
       <div className="page-view content">
 
-        {/* ── KPI Summary ─────────────────────────────────────────────────── */}
-        <div className="rpt-kpi-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: '#c2410c' }}>{allCounts.pending}</div>
-            <div className="rpt-kpi-lbl">Awaiting Review</div>
+        {/* ── KPI Summary & Breakdown Row ─────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '1.25rem', marginBottom: '1.25rem' }} className="kpi-breakdown-row">
+          
+          {/* Summary KPIs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', height: '100%' }}>
+              <div className="rpt-kpi" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div className="rpt-kpi-val" style={{ color: '#E8891A' }}>{allCounts.pending}</div>
+                <div className="rpt-kpi-lbl">Total Pending Expenses</div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>Value: {fmt(allCounts.totalPending)}</div>
+              </div>
+              <div className="rpt-kpi" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{allCounts.approved}</div>
+                <div className="rpt-kpi-lbl">Total Approved Expenses</div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>Value: {fmt(allCounts.totalApproved)}</div>
+              </div>
+              <div className="rpt-kpi" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div className="rpt-kpi-val" style={{ color: 'var(--red)' }}>{allCounts.rejected}</div>
+                <div className="rpt-kpi-lbl">Total Rejected Expenses</div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>Value: {fmt(allCounts.totalRejected)}</div>
+              </div>
+              <div className="rpt-kpi" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--green-ll)', border: '1px solid rgba(26,155,108,0.2)' }}>
+                <div className="rpt-kpi-val" style={{ color: 'var(--green-d)', fontSize: 26 }}>{fmt(allCounts.totalApproved)}</div>
+                <div className="rpt-kpi-lbl" style={{ fontWeight: 600 }}>Total Expense Value</div>
+                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>Only approved items affect payouts</div>
+              </div>
+            </div>
           </div>
-          <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: '#c2410c' }}>{fmt(allCounts.totalPending)}</div>
-            <div className="rpt-kpi-lbl">Pending Amount</div>
-          </div>
-          <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: 'var(--green-d)' }}>{allCounts.approved}</div>
-            <div className="rpt-kpi-lbl">Approved</div>
-          </div>
-          <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: 'var(--red)' }}>{allCounts.rejected}</div>
-            <div className="rpt-kpi-lbl">Rejected</div>
+
+          {/* Expense Category Breakdown Chart */}
+          <div className="rpt-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <div className="rpt-card-title" style={{ fontSize: 13, marginBottom: '1rem', fontWeight: 600 }}>Approved Category Breakdown</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+              {categoryBreakdown.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--gray)', textAlign: 'center', padding: '2rem', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  No approved expenses to show breakdown.
+                </div>
+              ) : (
+                categoryBreakdown.map(c => (
+                  <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: 13 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>{c.name}</span>
+                    <div style={{ flex: 2, background: 'var(--gray-l)', height: 6, borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${c.pct}%`, background: c.color, height: '100%' }} />
+                    </div>
+                    <span style={{ width: '65px', textAlign: 'right', fontWeight: 600, color: 'var(--ink)' }}>{fmt(c.amount)}</span>
+                    <span style={{ width: '35px', textAlign: 'right', color: 'var(--gray)', fontSize: 11 }}>{c.pct.toFixed(0)}%</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -363,40 +440,21 @@ export function AdminExpensesPage() {
         </div>
 
         {/* ── Table ───────────────────────────────────────────────────────── */}
-        <div className="rpt-card" style={{ padding: 0 }}>
-          {/* Card header */}
-          <div className="rpt-card-header" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <div>
-              <div className="rpt-card-title">
-                {tab === 'pending' ? '⏳ Pending Approval' : tab === 'approved' ? '✅ Approved Expenses' : '❌ Rejected Expenses'}
-              </div>
-              <div className="rpt-card-sub">
-                {tab === 'pending'
-                  ? 'Review and act on expense submissions from branch ambassadors'
-                  : tab === 'approved'
-                  ? 'Approved expenses flow into investor P&L and dashboard reports'
-                  : 'Rejected submissions — reason is shown to the ambassador'}
-              </div>
-            </div>
-          </div>
-
+        <div className="rpt-card" style={{ marginTop: '1.25rem' }}>
           <div className="rpt-table-wrap">
             {isLoading ? (
               <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray)' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 8px' }}>
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                Loading expenses...
+                Loading expenses list...
               </div>
             ) : filtered.length === 0 ? (
               <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray)' }}>
-                <div style={{ fontSize: 14 }}>
+                <div>
                   {hasActiveFilters
                     ? 'No expenses match your current filters.'
                     : tab === 'pending'
-                    ? 'No expenses awaiting approval. All caught up! 🎉'
+                    ? 'No pending expenses for review. 🎉'
                     : tab === 'approved'
-                    ? 'No approved expenses yet.'
+                    ? 'No approved expenses found.'
                     : 'No rejected expenses.'}
                 </div>
                 {hasActiveFilters && (
@@ -416,8 +474,8 @@ export function AdminExpensesPage() {
                     <th>Ambassador</th>
                     <th>College</th>
                     <th>Printer</th>
-                    <th>Category</th>
-                    <th>Description</th>
+                    <th>Expense Type</th>
+                    <th>Expense Mode</th>
                     <th>Amount</th>
                     <th>Bill</th>
                     <th>Status</th>
@@ -445,7 +503,7 @@ export function AdminExpensesPage() {
                         </div>
                       </td>
 
-                      {/* College / location */}
+                      {/* College */}
                       <td style={{ color: 'var(--gray)', fontSize: 12 }}>
                         {e.kiosk?.location || '—'}
                       </td>
@@ -457,7 +515,7 @@ export function AdminExpensesPage() {
                         </div>
                       </td>
 
-                      {/* Category */}
+                      {/* Expense Type */}
                       <td>
                         <span style={{
                           background: 'var(--gray-l)',
@@ -466,21 +524,63 @@ export function AdminExpensesPage() {
                           fontSize: 12,
                           color: 'var(--gray)',
                           whiteSpace: 'nowrap',
+                          fontWeight: 500
                         }}>
-                          {e.category}
+                          {e.expense_name || e.category}
                         </span>
                       </td>
 
-                      {/* Description */}
-                      <td style={{ color: 'var(--ink)', fontSize: 13, maxWidth: 180 }}>
-                        {e.notes || '—'}
+                      {/* Expense Mode */}
+                      <td>
+                        {e.catalog_item ? (
+                          <span style={{
+                            background: e.catalog_item.expense_mode === 'fixed' ? 'rgba(26,155,108,0.1)' : 'rgba(232,137,26,0.1)',
+                            color: e.catalog_item.expense_mode === 'fixed' ? 'var(--green)' : 'var(--amber)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            display: 'inline-block'
+                          }}>
+                            {e.catalog_item.expense_mode === 'fixed' ? 'Fixed' : 'Custom'}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--gray)', fontSize: 12, fontStyle: 'italic' }}>—</span>
+                        )}
                       </td>
 
                       {/* Amount */}
                       <td>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
-                          {fmt(Number(e.amount))}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
+                            {fmt(Number(e.amount))}
+                          </span>
+                          {/* Price mismatch warning for fixed expenses */}
+                          {e.catalog_item && e.catalog_item.expense_mode === 'fixed' && (
+                            <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+                              Catalog: {fmt(e.catalog_item.default_amount)}
+                              {Number(e.catalog_item.default_amount) !== Number(e.amount) && (
+                                <span style={{
+                                  background: 'rgba(217, 64, 64, 0.12)',
+                                  color: 'var(--red)',
+                                  padding: '1px 5px',
+                                  borderRadius: 3,
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  marginLeft: 4,
+                                  display: 'inline-block'
+                                }}>
+                                  ⚠️ Price mismatch
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {e.catalog_item && e.catalog_item.expense_mode === 'custom' && (
+                            <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 500, marginTop: 2 }}>
+                              Custom mode
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Bill */}
@@ -657,9 +757,9 @@ export function AdminExpensesPage() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expense Type</div>
                   <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 2 }}>
-                    {rejectModal.expense.category}
+                    {rejectModal.expense.expense_name || rejectModal.expense.category}
                   </div>
                 </div>
               </div>
@@ -717,10 +817,12 @@ export function AdminExpensesPage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-          .rpt-kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+        @media (max-width: 900px) {
+          .kpi-breakdown-row {
+            grid-template-columns: 1fr !important;
+          }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 640px) {
           .rpt-kpi-row { grid-template-columns: 1fr 1fr !important; }
         }
       `}</style>

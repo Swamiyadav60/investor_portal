@@ -1,22 +1,16 @@
-import { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { fmt } from '@/lib/format'
-import type { Expense } from '@/types/database'
+import type { Expense, ExpenseCatalogItem } from '@/types/database'
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const CATEGORIES = {
-  variable: ['Paper', 'Toner / Ink', 'Drum', 'Maintenance'],
-  fixed: ['Rent / Space', 'Internet / Electricity', 'Staff', 'Insurance'],
-}
-
 const INITIAL_FORM = {
   kiosk_id: '',
-  expense_type: 'variable' as 'variable' | 'fixed',
-  category: 'Paper',
+  expense_catalog_id: '',
   description: '',
   amount: '',
   date: new Date().toISOString().split('T')[0],
@@ -25,11 +19,38 @@ const INITIAL_FORM = {
 
 // ── Status Badge ───────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
-  return (
-    <span className={`status-badge ${status}`}>
-      {status === 'pending' ? 'Pending' : status === 'approved' ? 'Approved' : 'Rejected'}
-    </span>
-  )
+  const styles: Record<string, React.CSSProperties> = {
+    pending: {
+      background: 'rgba(232, 137, 26, 0.12)', // Yellow / Amber
+      color: '#E8891A',
+      padding: '4px 10px',
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 600,
+      display: 'inline-block',
+    },
+    approved: {
+      background: 'rgba(26, 155, 108, 0.12)', // Green
+      color: '#1A9B6C',
+      padding: '4px 10px',
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 600,
+      display: 'inline-block',
+    },
+    rejected: {
+      background: 'rgba(217, 64, 64, 0.12)', // Red
+      color: '#D94040',
+      padding: '4px 10px',
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 600,
+      display: 'inline-block',
+    }
+  }
+
+  const label = status === 'pending' ? 'Pending' : status === 'approved' ? 'Approved' : 'Rejected'
+  return <span style={styles[status] || styles.pending}>{label}</span>
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────
@@ -60,6 +81,36 @@ export function BranchMyExpensesPage() {
       return data || []
     },
   })
+
+  // ── Query: Active Expense Catalog Items ──────────────────────────────────
+  const { data: catalogItems = [], isLoading: loadingCatalog } = useQuery<ExpenseCatalogItem[]>({
+    queryKey: ['active-expense-catalog'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_catalog')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    }
+  })
+
+  // Find currently selected expense catalog details
+  const selectedCatalogItem = useMemo(() => {
+    return catalogItems.find(item => item.id === form.expense_catalog_id)
+  }, [catalogItems, form.expense_catalog_id])
+
+  // Handle Catalog Item Dropdown Change
+  const handleCatalogItemChange = (catalogId: string) => {
+    const item = catalogItems.find(i => i.id === catalogId)
+    setForm(prev => ({
+      ...prev,
+      expense_catalog_id: catalogId,
+      amount: item && item.expense_mode === 'fixed' ? item.default_amount.toString() : '',
+      description: prev.description ? prev.description : (item?.description || item?.name || ''),
+    }))
+  }
 
   // ── Query: My Expenses ───────────────────────────────────────────────────
   const { data: expenses = [], isLoading: loadingExpenses } = useQuery({
@@ -116,8 +167,15 @@ export function BranchMyExpensesPage() {
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!form.kiosk_id) throw new Error('Please select a printer')
+      if (!form.expense_catalog_id) throw new Error('Please select an expense type')
+      if (!selectedCatalogItem) throw new Error('Selected expense type is invalid')
       if (!form.amount || Number(form.amount) <= 0) throw new Error('Please enter a valid amount')
-      if (!form.category) throw new Error('Please select a category')
+      if (!form.description.trim()) throw new Error('Please enter a description')
+
+      // Custom amount validation: Bill upload is mandatory
+      if (selectedCatalogItem.expense_mode === 'custom' && !billFile) {
+        throw new Error('A receipt/bill upload is mandatory for custom amount expenses.')
+      }
 
       setUploading(true)
       let billUrl: string | null = null
@@ -133,19 +191,24 @@ export function BranchMyExpensesPage() {
           billUrl = publicUrl
         }
 
+        // Determine if category belongs to fixed type list for legacy/investor reports compatibility
+        const isFixedCategory = ['Rent / Space', 'Internet / Electricity', 'Staff', 'Insurance'].includes(selectedCatalogItem.category)
+
         const payload = {
-          kiosk_id:     form.kiosk_id,
-          expense_type: form.expense_type,
-          category:     form.category,
-          notes:        form.description ? `${form.description}${form.notes ? ' — ' + form.notes : ''}` : form.notes || null,
-          amount:       Number(form.amount),
-          period_start: form.date,
-          period_end:   form.date,
-          period_type:  'monthly',
-          status:       'pending',
-          submitted_by: investor!.id,
-          created_by:   investor!.id,
-          bill_url:     billUrl,
+          kiosk_id:           form.kiosk_id,
+          expense_type:       isFixedCategory ? 'fixed' : 'variable',
+          category:           selectedCatalogItem.category,
+          expense_name:       selectedCatalogItem.name,
+          expense_catalog_id: selectedCatalogItem.id,
+          notes:              form.description.trim() + (form.notes.trim() ? ` — ${form.notes.trim()}` : ''),
+          amount:             Number(form.amount),
+          period_start:       form.date,
+          period_end:         form.date,
+          period_type:        'monthly',
+          status:             'pending',
+          submitted_by:       investor!.id,
+          created_by:         investor!.id,
+          bill_url:           billUrl,
         }
 
         const { error } = await supabase.from('expenses').insert(payload)
@@ -183,21 +246,21 @@ export function BranchMyExpensesPage() {
             <div className="rpt-kpi-lbl">Total Submitted</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: '#c2410c' }}>{stats.pending}</div>
+            <div className="rpt-kpi-val" style={{ color: '#E8891A' }}>{stats.pending}</div>
             <div className="rpt-kpi-lbl">Pending Review</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: 'var(--green-d)' }}>{stats.approved}</div>
-            <div className="rpt-kpi-lbl">Approved</div>
+            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{stats.approved}</div>
+            <div className="rpt-kpi-lbl">Approved Count</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val" style={{ color: 'var(--red)' }}>{fmt(stats.totalApprovedAmount)}</div>
-            <div className="rpt-kpi-lbl">Approved Amount</div>
+            <div className="rpt-kpi-val" style={{ color: 'var(--green)' }}>{fmt(stats.totalApprovedAmount)}</div>
+            <div className="rpt-kpi-lbl">Approved Amount (₹)</div>
           </div>
         </div>
 
-        {/* ── Expense Submission Form ────────────────────────────────────── */}
-        <div className="rpt-card">
+        {/* ── Submission Form ────────────────────────────────────────────── */}
+        <div className="rpt-card" style={{ marginBottom: '1.5rem' }}>
           <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
             <div>
               <div className="rpt-card-title">Submit New Expense</div>
@@ -205,226 +268,257 @@ export function BranchMyExpensesPage() {
             </div>
           </div>
 
-          {/* Row 1: Printer + Type */}
-          <div className="admin-form-row">
-            <div className="admin-form-group">
-              <label className="admin-form-label">Assigned Printer *</label>
-              {loadingKiosks ? (
-                <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
-                  Loading printers...
-                </div>
-              ) : assignedKiosks.length === 0 ? (
-                <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
-                  No printers assigned to you yet
-                </div>
-              ) : (
-                <select
-                  className="admin-form-input"
-                  value={form.kiosk_id}
-                  onChange={e => setForm({ ...form, kiosk_id: e.target.value })}
-                >
-                  <option value="">— Select printer —</option>
-                  {assignedKiosks.map((k: any) => (
-                    <option key={k.id} value={k.id}>
-                      {k.name} · {k.location}
-                    </option>
-                  ))}
-                </select>
-              )}
+          <form onSubmit={(e) => { e.preventDefault(); submitMutation.mutate(); }}>
+            {/* Row 1: Printer + Expense Type */}
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label className="admin-form-label">Assigned Printer *</label>
+                {loadingKiosks ? (
+                  <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
+                    Loading printers...
+                  </div>
+                ) : assignedKiosks.length === 0 ? (
+                  <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
+                    No printers assigned to you yet
+                  </div>
+                ) : (
+                  <select
+                    className="admin-form-input"
+                    value={form.kiosk_id}
+                    onChange={e => setForm({ ...form, kiosk_id: e.target.value })}
+                    required
+                  >
+                    <option value="">— Select printer —</option>
+                    {assignedKiosks.map((k: any) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name} · {k.location}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="admin-form-group">
+                <label className="admin-form-label">Expense Type *</label>
+                {loadingCatalog ? (
+                  <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
+                    Loading types...
+                  </div>
+                ) : (
+                  <select
+                    className="admin-form-input"
+                    value={form.expense_catalog_id}
+                    onChange={e => handleCatalogItemChange(e.target.value)}
+                    required
+                  >
+                    <option value="">— Select type —</option>
+                    {catalogItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.category})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
 
-            <div className="admin-form-group">
-              <label className="admin-form-label">Expense Type *</label>
-              <select
+            {/* Row 2: Amount + Description */}
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label className="admin-form-label">
+                  Amount (₹) * {selectedCatalogItem?.expense_mode === 'fixed' && '(Fixed Mode)'}
+                </label>
+                <input
+                  className="admin-form-input"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.amount}
+                  onChange={e => setForm({ ...form, amount: e.target.value })}
+                  disabled={selectedCatalogItem?.expense_mode === 'fixed'}
+                  required
+                />
+                {selectedCatalogItem && (
+                  <div style={{ fontSize: 11, color: selectedCatalogItem.expense_mode === 'fixed' ? 'var(--gray)' : 'var(--amber)', marginTop: 4 }}>
+                    {selectedCatalogItem.expense_mode === 'fixed' 
+                      ? '🔒 Enforced price from catalog.' 
+                      : '✍️ Enter amount manually. Receipt upload is mandatory.'}
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-form-group">
+                <label className="admin-form-label">Description / Details *</label>
+                <input
+                  className="admin-form-input"
+                  type="text"
+                  placeholder="e.g. Toner refill black cartridge"
+                  value={form.description}
+                  onChange={e => setForm({ ...form, description: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Date */}
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label className="admin-form-label">Expense Date *</label>
+                <input
+                  className="admin-form-input"
+                  type="date"
+                  value={form.date}
+                  onChange={e => setForm({ ...form, date: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="admin-form-group" style={{ visibility: 'hidden' }}>
+                {/* Visual balance placeholder */}
+                <input className="admin-form-input" />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="admin-form-group" style={{ marginBottom: '.75rem' }}>
+              <label className="admin-form-label">Additional Notes (optional)</label>
+              <textarea
                 className="admin-form-input"
-                value={form.expense_type}
-                onChange={e => {
-                  const type = e.target.value as 'variable' | 'fixed'
-                  setForm({ ...form, expense_type: type, category: CATEGORIES[type][0] })
+                rows={2}
+                placeholder="Any extra context for the admin reviewer..."
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                style={{ resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
+              />
+            </div>
+
+            {/* Bill Upload */}
+            <div className="admin-form-group" style={{ marginBottom: '1.25rem' }}>
+              <label className="admin-form-label">
+                Upload Bill / Receipt {selectedCatalogItem?.expense_mode === 'custom' ? '(Mandatory *)' : '(Optional)'}
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                id="my-expense-bill"
+                accept="image/*,application/pdf"
+                style={{ display: 'none' }}
+                onChange={e => handleFile(e.target.files?.[0] || null)}
+                disabled={isSubmitting}
+              />
+              <label
+                htmlFor="my-expense-bill"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '20px',
+                  border: `2px dashed ${
+                    billFile 
+                      ? 'var(--green)' 
+                      : selectedCatalogItem?.expense_mode === 'custom' 
+                        ? 'var(--amber)' 
+                        : 'var(--border)'
+                  }`,
+                  borderRadius: '10px',
+                  background: billFile ? 'var(--green-ll)' : 'var(--bg)',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'center',
+                }}
+                onMouseOver={e => {
+                  if (!isSubmitting) (e.currentTarget as HTMLElement).style.borderColor = 'var(--green)'
+                }}
+                onMouseOut={e => {
+                  if (!billFile) {
+                    (e.currentTarget as HTMLElement).style.borderColor = 
+                      selectedCatalogItem?.expense_mode === 'custom' ? 'var(--amber)' : 'var(--border)'
+                  }
                 }}
               >
-                <option value="variable">Variable (consumables)</option>
-                <option value="fixed">Fixed (recurring)</option>
-              </select>
+                {billPreview ? (
+                  <img
+                    src={billPreview}
+                    alt="Bill preview"
+                    style={{ height: 80, objectFit: 'contain', borderRadius: 6 }}
+                  />
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                )}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: billFile ? 'var(--green-d)' : 'var(--ink)' }}>
+                    {billFile ? billFile.name : 'Click to upload receipt (PDF / Image)'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+                    {selectedCatalogItem?.expense_mode === 'custom' && !billFile ? (
+                      <span style={{ color: 'var(--red)', fontWeight: 600 }}>⚠️ Required for Custom Mode</span>
+                    ) : (
+                      'Max 5 MB — attaches a proof to your submission'
+                    )}
+                  </div>
+                </div>
+                {billFile && (
+                  <button
+                    type="button"
+                    onClick={e => { e.preventDefault(); handleFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      color: 'var(--red)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✕ Remove
+                  </button>
+                )}
+              </label>
             </div>
-          </div>
 
-          {/* Row 2: Category + Amount */}
-          <div className="admin-form-row">
-            <div className="admin-form-group">
-              <label className="admin-form-label">Category *</label>
-              <select
-                className="admin-form-input"
-                value={form.category}
-                onChange={e => setForm({ ...form, category: e.target.value })}
+            {/* Submit button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="submit"
+                className="admin-btn admin-btn-primary"
+                style={{ minWidth: 160, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
+                disabled={
+                  isSubmitting ||
+                  !form.kiosk_id ||
+                  !form.expense_catalog_id ||
+                  !form.amount ||
+                  !form.description ||
+                  (selectedCatalogItem?.expense_mode === 'custom' && !billFile) ||
+                  assignedKiosks.length === 0
+                }
               >
-                {CATEGORIES[form.expense_type].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                {isSubmitting ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    {uploading ? 'Uploading...' : 'Submitting...'}
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    Submit Expense
+                  </>
+                )}
+              </button>
             </div>
-
-            <div className="admin-form-group">
-              <label className="admin-form-label">Amount (₹) *</label>
-              <input
-                className="admin-form-input"
-                type="number"
-                min="1"
-                step="0.01"
-                placeholder="0.00"
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Description + Date */}
-          <div className="admin-form-row">
-            <div className="admin-form-group">
-              <label className="admin-form-label">Description *</label>
-              <input
-                className="admin-form-input"
-                type="text"
-                placeholder="e.g. Monthly paper restock"
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-
-            <div className="admin-form-group">
-              <label className="admin-form-label">Expense Date *</label>
-              <input
-                className="admin-form-input"
-                type="date"
-                value={form.date}
-                onChange={e => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="admin-form-group" style={{ marginBottom: '.75rem' }}>
-            <label className="admin-form-label">Additional Notes (optional)</label>
-            <textarea
-              className="admin-form-input"
-              rows={2}
-              placeholder="Any extra context for the admin reviewer..."
-              value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
-              style={{ resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
-            />
-          </div>
-
-          {/* Bill Upload */}
-          <div className="admin-form-group" style={{ marginBottom: '1.25rem' }}>
-            <label className="admin-form-label">Upload Bill / Receipt (optional)</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              id="my-expense-bill"
-              accept="image/*,application/pdf"
-              style={{ display: 'none' }}
-              onChange={e => handleFile(e.target.files?.[0] || null)}
-              disabled={isSubmitting}
-            />
-            <label
-              htmlFor="my-expense-bill"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '20px',
-                border: `2px dashed ${billFile ? 'var(--green)' : 'var(--border)'}`,
-                borderRadius: '10px',
-                background: billFile ? 'var(--green-ll)' : 'var(--bg)',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                textAlign: 'center',
-              }}
-              onMouseOver={e => {
-                if (!isSubmitting) (e.currentTarget as HTMLElement).style.borderColor = 'var(--green)'
-              }}
-              onMouseOut={e => {
-                if (!billFile) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
-              }}
-            >
-              {billPreview ? (
-                <img
-                  src={billPreview}
-                  alt="Bill preview"
-                  style={{ height: 80, objectFit: 'contain', borderRadius: 6 }}
-                />
-              ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              )}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: billFile ? 'var(--green-d)' : 'var(--ink)' }}>
-                  {billFile ? billFile.name : 'Click to upload receipt (PDF / Image)'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
-                  {billFile
-                    ? `${(billFile.size / 1024 / 1024).toFixed(2)} MB`
-                    : 'Max 5 MB — attach to strengthen your claim'}
-                </div>
-              </div>
-              {billFile && (
-                <button
-                  type="button"
-                  onClick={e => { e.preventDefault(); handleFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
-                  style={{
-                    marginTop: 4,
-                    fontSize: 11,
-                    color: 'var(--red)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  ✕ Remove
-                </button>
-              )}
-            </label>
-          </div>
-
-          {/* Submit button */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              className="admin-btn admin-btn-primary"
-              style={{ minWidth: 160, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
-              onClick={() => submitMutation.mutate()}
-              disabled={
-                isSubmitting ||
-                !form.kiosk_id ||
-                !form.amount ||
-                !form.description ||
-                assignedKiosks.length === 0
-              }
-            >
-              {isSubmitting ? (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                  {uploading ? 'Uploading...' : 'Submitting...'}
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  Submit Expense
-                </>
-              )}
-            </button>
-          </div>
+          </form>
         </div>
 
         {/* ── My Expenses Table ──────────────────────────────────────────── */}
@@ -513,9 +607,9 @@ export function BranchMyExpensesPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Date</th>
+                    <th>Submission Date</th>
                     <th>Printer</th>
-                    <th>Category</th>
+                    <th>Expense Type</th>
                     <th>Description</th>
                     <th>Amount</th>
                     <th>Receipt</th>
@@ -524,10 +618,10 @@ export function BranchMyExpensesPage() {
                 </thead>
                 <tbody>
                   {filtered.map((e: Expense) => (
-                    <>
-                      <tr key={e.id}>
+                    <React.Fragment key={e.id}>
+                      <tr>
                         <td style={{ whiteSpace: 'nowrap', color: 'var(--gray)', fontSize: 12 }}>
-                          {new Date(e.period_start).toLocaleDateString('en-IN', {
+                          {new Date(e.created_at || e.period_start).toLocaleDateString('en-IN', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
@@ -548,8 +642,9 @@ export function BranchMyExpensesPage() {
                             borderRadius: 6,
                             fontSize: 12,
                             color: 'var(--gray)',
+                            fontWeight: 500
                           }}>
-                            {e.category}
+                            {e.expense_name || e.category}
                           </span>
                         </td>
                         <td style={{ color: 'var(--ink)', fontSize: 13, maxWidth: 180 }}>
@@ -611,7 +706,7 @@ export function BranchMyExpensesPage() {
 
                       {/* Rejection reason expansion row */}
                       {e.status === 'rejected' && expandedRejection === e.id && (
-                        <tr key={`${e.id}-reason`} style={{ background: 'var(--red-l)' }}>
+                        <tr style={{ background: 'var(--red-l)' }}>
                           <td colSpan={7}>
                             <div style={{
                               display: 'flex',
@@ -636,7 +731,7 @@ export function BranchMyExpensesPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

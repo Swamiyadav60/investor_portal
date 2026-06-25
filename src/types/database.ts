@@ -192,6 +192,8 @@ export interface Expense {
   period_end: string
   period_type: string
   notes: string | null
+  expense_name?: string | null
+  expense_catalog_id?: string | null
 
   // ── Approval workflow ─────────────────────────────────────────
   /** pending | approved | rejected. Default: 'pending' */
@@ -300,3 +302,15 @@ export interface ExpenseBreakdown {
   color: string
   pct: number
 }
+
+export interface ExpenseCatalogItem {
+  id: string
+  name: string
+  category: string
+  default_amount: number
+  expense_mode: 'fixed' | 'custom'
+  description: string | null
+  is_active: boolean
+  created_at: string
+}
+
