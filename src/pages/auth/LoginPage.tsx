@@ -116,7 +116,7 @@ export function LoginPage() {
       <style>{`
         .role-cards-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           gap: 10px;
           margin-bottom: 24px;
         }
@@ -256,21 +256,7 @@ export function LoginPage() {
               <div className="role-card-desc">Maintenance</div>
             </div>
 
-            <div 
-              className={`role-card-item ${selectedRole === 'admin' ? 'active' : ''}`}
-              onClick={() => setSelectedRole('admin')}
-            >
-              <div className="role-card-icon-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </div>
-              <div className="role-card-name">Admin</div>
-              <div className="role-card-desc">Manager</div>
-            </div>
           </div>
-
           <div className="auth-title">{roleConfig[selectedRole].title}</div>
           <div className="auth-sub">{roleConfig[selectedRole].sub}</div>
 
