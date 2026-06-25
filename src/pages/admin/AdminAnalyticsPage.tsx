@@ -25,13 +25,14 @@ export function AdminAnalyticsPage() {
     },
   })
 
-  // ── All expenses ─────────────────────────────────────────────
+  // ── All expenses (approved only — matches investor reports) ─────
   const { data: expenses = [] } = useQuery({
     queryKey: ['admin-all-expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('status', 'approved')
       if (error) throw error
       return data || []
     },

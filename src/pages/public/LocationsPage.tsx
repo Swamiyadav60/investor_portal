@@ -245,10 +245,10 @@ export function LocationsPage() {
     </>
   )
 
-  if (investor) {
+  if (investor && !isAdmin) {
     return (
       <div className="app-shell">
-        <Sidebar admin={isAdmin} />
+        <Sidebar admin={false} />
         <div className="main">
           <Topbar title="Available Locations" />
           <div className="page-view content">
@@ -264,7 +264,7 @@ export function LocationsPage() {
           )}
         </div>
       </div>
-    )
+    );
   }
 
   return (

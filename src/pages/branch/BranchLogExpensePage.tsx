@@ -145,7 +145,11 @@ export function BranchLogExpensePage() {
           period_end: form.period_end,
           period_type: 'monthly',
           notes: form.notes || null,
+          // Audit: who clicked "Submit"
           created_by: investor?.id || null,
+          // Approval workflow: ambassador identity (used by admin approval view)
+          submitted_by: investor?.id || null,
+          // All new submissions start in the pending queue
           status: 'pending',
           bill_url: billUrl,
         }

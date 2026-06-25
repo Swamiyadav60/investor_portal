@@ -21,6 +21,7 @@ import { BranchDashboardPage } from '@/pages/branch/BranchDashboardPage'
 import { BranchPrintersPage } from '@/pages/branch/BranchPrintersPage'
 import { BranchLogExpensePage } from '@/pages/branch/BranchLogExpensePage'
 import { BranchHistoryPage } from '@/pages/branch/BranchHistoryPage'
+import { BranchMyExpensesPage } from '@/pages/branch/BranchMyExpensesPage'
 import { AdminCollegesPage } from '@/pages/admin/AdminCollegesPage'
 import { AdminInvestorsPage } from '@/pages/admin/AdminInvestorsPage'
 import { AdminKiosksPage } from '@/pages/admin/AdminKiosksPage'
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/branch/dashboard" element={<BranchDashboardPage />} />
               <Route path="/branch/printers" element={<BranchPrintersPage />} />
               <Route path="/branch/log-expense" element={<BranchLogExpensePage />} />
+              <Route path="/branch/my-expenses" element={<BranchMyExpensesPage />} />
               <Route path="/branch/history" element={<BranchHistoryPage />} />
             </Route>
 
