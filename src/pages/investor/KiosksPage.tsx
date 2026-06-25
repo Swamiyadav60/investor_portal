@@ -64,7 +64,7 @@ export function KiosksPage() {
       .from('kiosks')
       .select('*')
       .in('id', kioskIds)
-      .eq('status', 'pending')
+      .eq('status', 'pending_installation')
 
     return data || []
   }
@@ -208,7 +208,7 @@ const { data: myWaitlists = [] } = useQuery({
                 <div className="pc-icon" style={{ background: 'var(--amber-l)' }}>
                   <svg viewBox="0 0 24 24" style={{ stroke: 'var(--amber)' }}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                 </div>
-                <span className="pc-status pending">Installing</span>
+                <span className="pc-status pending-installation">Pending Installation</span>
               </div>
               <div className="pc-name">{k.name}</div>
               <div className="pc-loc">

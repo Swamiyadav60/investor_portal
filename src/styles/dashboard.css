@@ -1471,6 +1471,55 @@ body {
   color: #A05C10
 }
 
+/* ── Pending Installation workflow badges ────────────────────── */
+.pc-status.pending-installation {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.pc-status.suspended {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.pc-status.maintenance-badge {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+}
+
+.pc-status.offline-badge {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
+}
+
+/* Admin badge variants for new statuses */
+.admin-badge-maintenance {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.admin-badge-suspended {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.admin-badge-offline {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
 .pc-name {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;

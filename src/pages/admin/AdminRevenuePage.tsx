@@ -25,6 +25,7 @@ export function AdminRevenuePage() {
       const { data, error } = await supabase
         .from('kiosks')
         .select('id, name, location, status')
+        .eq('status', 'active')
         .order('name')
       if (error) throw error
       return data || []

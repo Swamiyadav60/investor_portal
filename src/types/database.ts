@@ -1,5 +1,5 @@
 export type UserRole = 'investor' | 'branch_ambassador' | 'admin'
-export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance'
+export type KioskStatus = 'active' | 'pending' | 'pending_installation' | 'offline' | 'maintenance' | 'suspended'
 export type ExpenseType = 'variable' | 'fixed'
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled'
 export type PaymentType = 'payout' | 'withdrawal' | 'investment'
@@ -137,6 +137,9 @@ export interface Kiosk {
   installed_at: string | null
   is_online: boolean
   branch_ambassador_id?: string | null
+  installation_date?: string | null
+  installed_by?: string | null
+  printer_serial?: string | null
   created_at: string
   updated_at: string
   college?: College
