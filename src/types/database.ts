@@ -1,5 +1,5 @@
 export type UserRole = 'investor' | 'branch_ambassador' | 'admin'
-export type KioskStatus = 'active' | 'pending' | 'pending_installation' | 'offline' | 'maintenance' | 'suspended'
+export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance' | 'suspended'
 export type ExpenseType = 'variable' | 'fixed'
 /**
  * Expense approval workflow statuses.

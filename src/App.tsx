@@ -25,7 +25,6 @@ import { BranchMyExpensesPage } from '@/pages/branch/BranchMyExpensesPage'
 import { AdminCollegesPage } from '@/pages/admin/AdminCollegesPage'
 import { AdminInvestorsPage } from '@/pages/admin/AdminInvestorsPage'
 import { AdminKiosksPage } from '@/pages/admin/AdminKiosksPage'
-import { AdminInstallationsPage } from '@/pages/admin/AdminInstallationsPage'
 import { AdminRevenuePage } from '@/pages/admin/AdminRevenuePage'
 import { AdminExpensesPage } from '@/pages/admin/AdminExpensesPage'
 import { AdminExpenseCatalogPage } from '@/pages/admin/AdminExpenseCatalogPage'
@@ -72,7 +71,6 @@ export default function App() {
               <Route path="/admin/colleges" element={<AdminCollegesPage />} />
               <Route path="/admin/investors" element={<AdminInvestorsPage />} />
               <Route path="/admin/kiosks" element={<AdminKiosksPage />} />
-              <Route path="/admin/installations" element={<AdminInstallationsPage />} />
               <Route path="/admin/revenue" element={<AdminRevenuePage />} />
               <Route path="/admin/expenses" element={<AdminExpensesPage />} />
               <Route path="/admin/expense-catalog" element={<AdminExpenseCatalogPage />} />

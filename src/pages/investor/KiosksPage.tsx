@@ -46,29 +46,7 @@ export function KiosksPage() {
   const { toast } = useToast()
 
   
-  const { data: pendingKiosks = [] } = useQuery({
-  queryKey: ['pending-kiosks', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data: assignments } = await supabase
-      .from('investor_kiosks')
-      .select('kiosk_id')
-      .eq('investor_id', investor!.id)
 
-    const kioskIds =
-      assignments?.map(a => a.kiosk_id) || []
-
-    if (!kioskIds.length) return []
-
-    const { data } = await supabase
-      .from('kiosks')
-      .select('*')
-      .in('id', kioskIds)
-      .eq('status', 'pending_installation')
-
-    return data || []
-  }
-})
 const { data: colleges = [] } = useQuery({
   queryKey: ['colleges'],
   queryFn: async () => {
@@ -187,57 +165,6 @@ const { data: myWaitlists = [] } = useQuery({
           <div className="section-divider-line" />
           <div className="section-divider-label">Available to invest</div>
           <div className="section-divider-line" />
-        </div>
-
-        <div className="section-header" style={{ marginBottom: '.75rem' }}>
-          <div>
-            <div className="section-heading" style={{ fontSize: 14 }}>Pending installation</div>
-            <div className="section-heading-sub">Purchased slots awaiting hardware setup</div>
-          </div>
-        </div>
-
-        <div className="printer-cards">
-          {pendingKiosks.map((k) => {
-  const currentStep =
-    (k.install_steps as any[])?.filter((s: any) => s.done).length || 0
-
-  return (
-    <div key={k.id} className="pc pending-card">
-              <div className="pc-accent" />
-              <div className="pc-top">
-                <div className="pc-icon" style={{ background: 'var(--amber-l)' }}>
-                  <svg viewBox="0 0 24 24" style={{ stroke: 'var(--amber)' }}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                </div>
-                <span className="pc-status pending-installation">Pending Installation</span>
-              </div>
-              <div className="pc-name">{k.name}</div>
-              <div className="pc-loc">
-                <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {k.location}
-              </div>
-              <div className="install-steps">
-                {(k.install_steps as any[] || []).map((s: any, i: number) => (
-                  <div key={i} className={`install-step ${s.done ? 'done' : s.active ? 'active' : 'waiting'}`}>
-                    {s.done ? (
-                      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-                    ) : s.active ? (
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
-                    )}
-                    {s.label}
-                  </div>
-                ))}
-              </div>
-              <div className="pc-footer">
-                <span className="pc-footer-note" style={{ color: 'var(--amber)' }}>{k.install_eta}</span>
-                <span style={{ fontSize: 11, color: 'var(--gray)' }}>
-                   Step {currentStep} of 4
-                </span>
-              </div>
-            </div>
-            )
-          })}
         </div>
 
         <div className="section-header" style={{ marginTop: '1.5rem', marginBottom: '.75rem' }}>

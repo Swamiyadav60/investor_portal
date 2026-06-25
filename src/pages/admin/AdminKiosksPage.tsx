@@ -11,7 +11,7 @@ export function AdminKiosksPage() {
   const [newKioskName, setNewKioskName] = useState('')
   const [newKioskLocation, setNewKioskLocation] = useState('')
   const [newKioskCollegeId, setNewKioskCollegeId] = useState('')
-  const [newKioskStatus, setNewKioskStatus] = useState<'active'|'pending_installation'|'maintenance'|'suspended'|'offline'>('pending_installation')
+  const [newKioskStatus, setNewKioskStatus] = useState<'active'|'maintenance'|'suspended'|'offline'>('active')
   const [newKioskInvestorId, setNewKioskInvestorId] = useState('')
   const [newKioskAmbassadorId, setNewKioskAmbassadorId] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -98,7 +98,7 @@ export function AdminKiosksPage() {
       setNewKioskName('')
       setNewKioskLocation('')
       setNewKioskCollegeId('')
-      setNewKioskStatus('pending_installation')
+      setNewKioskStatus('active')
       setNewKioskInvestorId('')
       setNewKioskAmbassadorId('')
     },
@@ -223,8 +223,8 @@ export function AdminKiosksPage() {
                         <td>{k.location}</td>
                         <td>{k.college?.name || 'Main Campus'}</td>
                         <td>
-                          <span className={`admin-badge ${k.status === 'active' ? 'admin-badge-active' : k.status === 'pending_installation' ? 'admin-badge-pending' : k.status === 'maintenance' ? 'admin-badge-maintenance' : k.status === 'suspended' ? 'admin-badge-suspended' : 'admin-badge-offline'}`}>
-                            {k.status === 'pending_installation' ? 'Pending Installation' : k.status}
+                          <span className={`admin-badge ${k.status === 'active' ? 'admin-badge-active' : k.status === 'maintenance' ? 'admin-badge-maintenance' : k.status === 'suspended' ? 'admin-badge-suspended' : 'admin-badge-offline'}`}>
+                            {k.status}
                           </span>
                         </td>
                         <td style={{ color: activeInvestor ? 'var(--ink)' : 'var(--gray)', fontStyle: activeInvestor ? 'normal' : 'italic', fontSize: '13px' }}>
@@ -349,9 +349,8 @@ export function AdminKiosksPage() {
                 <select 
                   className="admin-form-input"
                   value={newKioskStatus}
-                  onChange={(e) => setNewKioskStatus(e.target.value as 'active'|'pending_installation'|'maintenance'|'suspended'|'offline')}
+                  onChange={(e) => setNewKioskStatus(e.target.value as 'active'|'maintenance'|'suspended'|'offline')}
                 >
-                  <option value="pending_installation">Pending Installation</option>
                   <option value="active">Active</option>
                   <option value="maintenance">Maintenance</option>
                   <option value="suspended">Suspended</option>
