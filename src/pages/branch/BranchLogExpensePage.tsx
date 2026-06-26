@@ -1,21 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
-import { supabase, isSupabaseConfigured} from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
+import type { ExpenseCatalogItem } from '@/types/database'
 
-const CATEGORIES = {
-  variable: ['Paper', 'Toner / Ink', 'Drum'],
-  fixed: ['Rent', 'Power bill', 'Maintenance'],
-}
-
-// Mock service history for demo
-const mockServiceHistory = [
-  { date: '15 Jun 2026', items: 'Drum, Ink', status: 'pending' },
-  { date: '06 Jun 2026', items: 'Drum, Paper', status: 'approved' }
-]
 
 export function BranchLogExpensePage() {
   const { investor } = useAuth()
@@ -28,9 +19,8 @@ export function BranchLogExpensePage() {
   
   // Form state
   const [form, setForm] = useState({
+    expense_catalog_id: '',
     amount: '',
-    category: 'Paper',
-    expense_type: 'variable' as 'variable' | 'fixed',
     period_start: new Date().toISOString().split('T')[0],
     period_end: new Date().toISOString().split('T')[0],
     notes: '',
@@ -47,7 +37,6 @@ export function BranchLogExpensePage() {
     queryKey: ['branch-kiosks-verify', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
-    
       const { data: kiosks, error } = await supabase
         .from('kiosks')
         .select('*')
@@ -63,6 +52,33 @@ export function BranchLogExpensePage() {
       }) || []
     },
   })
+
+  // 2. Fetch active catalog items
+  const { data: catalogItems = [], isLoading: loadingCatalog } = useQuery<ExpenseCatalogItem[]>({
+    queryKey: ['active-expense-catalog'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_catalog')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    }
+  })
+
+  const selectedCatalogItem = useMemo(() => {
+    return catalogItems.find(item => item.id === form.expense_catalog_id)
+  }, [catalogItems, form.expense_catalog_id])
+
+  const handleCatalogItemChange = (catalogId: string) => {
+    const item = catalogItems.find(i => i.id === catalogId)
+    setForm(prev => ({
+      ...prev,
+      expense_catalog_id: catalogId,
+      amount: item && item.expense_mode === 'fixed' ? item.default_amount.toString() : '',
+    }))
+  }
 
   // Prefill check
   useEffect(() => {
@@ -99,60 +115,58 @@ export function BranchLogExpensePage() {
     handleFindCode(printerCode)
   }
 
+  const handleYesLogExpense = () => {
+    setStep('form')
+  }
+
   const handleNotThisOne = () => {
     setStep('initial')
     setPrinterCode('')
     setFoundPrinter(null)
   }
 
-  const handleYesLogExpense = () => {
-    setStep('form')
-  }
-
+  // Submit mutation
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!foundPrinter) throw new Error('No printer selected')
+      if (!form.expense_catalog_id) throw new Error('Please select an expense type')
+      if (!selectedCatalogItem) throw new Error('Selected expense type is invalid')
+      if (!form.amount || Number(form.amount) <= 0) throw new Error('Please enter a valid amount')
+
+      // Custom mode validation: Bill upload is mandatory
+      if (selectedCatalogItem.expense_mode === 'custom' && !billFile) {
+        throw new Error('A receipt/bill upload is mandatory for custom amount expenses.')
+      }
+
       setUploading(true)
+      let billUrl: string | null = null
+
       try {
-        let billUrl = null
-        if (billFile) {
-          if (isSupabaseConfigured) {
-            const fileExt = billFile.name.split('.').pop()
-            const fileName = `${investor?.id || 'ambassador'}-${Date.now()}.${fileExt}`
-            const filePath = `receipts/${fileName}`
-
-            const { error: uploadError } = await supabase.storage
-               .from('bills')
-               .upload(filePath, billFile)
-
-            if (uploadError) throw new Error(`Bill upload error: ${uploadError.message}`)
-
-            const { data: { publicUrl } } = supabase.storage
-               .from('bills')
-               .getPublicUrl(filePath)
-
-            billUrl = publicUrl
-          } else {
-            billUrl = `https://placeholder.supabase.co/storage/v1/object/public/bills/receipts/mock-${Date.now()}`
-          }
+        if (billFile && isSupabaseConfigured) {
+          const ext = billFile.name.split('.').pop()
+          const path = `receipts/${investor?.id}-${Date.now()}.${ext}`
+          const { error: uploadErr } = await supabase.storage.from('bills').upload(path, billFile)
+          if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`)
+          const { data: { publicUrl } } = supabase.storage.from('bills').getPublicUrl(path)
+          billUrl = publicUrl
         }
 
+        const isFixedCategory = ['Rent / Space', 'Internet / Electricity', 'Staff', 'Insurance'].includes(selectedCatalogItem.category)
+
         const payload = {
-          kiosk_id: foundPrinter?.id,
+          kiosk_id: foundPrinter.id,
           amount: Number(form.amount),
-          category: form.category,
-          expense_type: form.expense_type,
+          category: selectedCatalogItem.category,
+          expense_name: selectedCatalogItem.name,
+          expense_catalog_id: selectedCatalogItem.id,
+          expense_type: isFixedCategory ? 'fixed' : 'variable',
           period_start: form.period_start,
           period_end: form.period_end,
           period_type: 'monthly',
-          notes: form.notes || null,
-          created_by: investor?.id || null,
+          notes: selectedCatalogItem.name + (form.notes.trim() ? ` — ${form.notes.trim()}` : ''),
+          submitted_by: investor?.id || null,
           status: 'pending',
           bill_url: billUrl,
-        }
-
-        if (!isSupabaseConfigured) {
-          toast(`Expense of ₹${form.amount} logged for verification.`, 'success')
-          return
         }
 
         const { error } = await supabase.from('expenses').insert(payload)
@@ -162,15 +176,22 @@ export function BranchLogExpensePage() {
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-my-expenses'] })
       queryClient.invalidateQueries({ queryKey: ['branch-expenses'] })
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
-      toast('Expense submitted for admin approval.', 'success')
+      toast('Expense submitted successfully and sent for admin review.', 'success')
       
       // Reset wizard
       setStep('initial')
       setPrinterCode('')
       setFoundPrinter(null)
-      setForm({ ...form, amount: '', notes: '' })
+      setForm({
+        expense_catalog_id: '',
+        amount: '',
+        period_start: new Date().toISOString().split('T')[0],
+        period_end: new Date().toISOString().split('T')[0],
+        notes: '',
+      })
       setBillFile(null)
     },
     onError: (err: any) => {
@@ -183,6 +204,305 @@ export function BranchLogExpensePage() {
 
   return (
     <>
+      <Topbar title="Log Expense" />
+      <div className="tech-expense-container">
+        <div className="tech-card">
+          <div className="tech-icon-wrapper">
+            <div className="tech-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div className="tech-heading">Verify Printer</div>
+          <div className="tech-subtitle">Enter or select the printer code to verify your assignment</div>
+
+          <div className="search-row">
+            <input 
+              type="text" 
+              className="search-input" 
+              placeholder="e.g. SP-001" 
+              value={printerCode}
+              onChange={(e) => setPrinterCode(e.target.value)}
+              disabled={step === 'loading'}
+              style={{
+                height: 50,
+                border: '1px solid #eaeaea',
+                borderRadius: 14,
+                padding: '0 18px',
+                fontSize: 15,
+                outline: 'none'
+              }}
+            />
+            <button 
+              className="btn-primary" 
+              onClick={handleFind}
+              disabled={!printerCode.trim() || step === 'loading'}
+              style={{
+                height: 50,
+                padding: '0 24px',
+                borderRadius: 14,
+                fontWeight: 600,
+                background: '#1A9B6C',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              Find
+            </button>
+          </div>
+
+          {(step === 'initial' || step === 'error' || step === 'loading') && quickChips.length > 0 && (
+            <div className="chips-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+              {quickChips.map(chip => (
+                <button 
+                  key={chip} 
+                  className="chip"
+                  onClick={() => {
+                    setPrinterCode(chip)
+                    handleFindCode(chip)
+                  }}
+                  disabled={step === 'loading'}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 999,
+                    border: '1px solid #1A9B6C',
+                    background: '#f0faf5',
+                    color: '#1A9B6C',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    fontSize: 13
+                  }}
+                >
+                  {chip}
+                </button>
+              ))}
+              <span className="chip-hint" style={{ fontSize: 11, color: 'var(--gray)', alignSelf: 'center' }}>← tap to select</span>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div className="error-message" style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, display: 'flex', gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              Printer not found or not assigned to you.
+            </div>
+          )}
+
+          {(step === 'verified' || step === 'form') && foundPrinter && (
+            <div className="verification-card" style={{ border: '1px solid #1A9B6C', borderRadius: 16, padding: 18, background: '#f0faf5', marginBottom: 20 }}>
+              <div className="vc-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div className="vc-title" style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 16 }}>{foundPrinter.name}</div>
+                  <div className="vc-location" style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 12, color: 'var(--gray)', marginTop: 4 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {foundPrinter.location}
+                  </div>
+                </div>
+                <div className="vc-badge" style={{ textAlign: 'right' }}>
+                  <div className="vc-badge-text" style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-d)' }}>CODE VERIFIED</div>
+                  <div className="vc-badge-code" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{foundPrinter.displayCode}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 'verified' && (
+            <div className="action-area" style={{ textAlign: 'center', marginTop: 24 }}>
+              <div className="action-text" style={{ marginBottom: 12, fontWeight: 600 }}>Is this the correct printer?</div>
+              <div className="action-buttons" style={{ display: 'flex', gap: 10 }}>
+                <button 
+                  className="btn-secondary" 
+                  onClick={handleNotThisOne}
+                  style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Not this one
+                </button>
+                <button 
+                  className="btn-primary" 
+                  onClick={handleYesLogExpense}
+                  style={{ flex: 2, height: 44, borderRadius: 10, background: '#1A9B6C', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Yes — log expense
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'form' && (
+            <div style={{ marginTop: '24px', animation: 'fadeIn 0.4s ease' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: '16px', color: 'var(--ink)' }}>Expense Details</div>
+              
+              <div className="admin-form-group" style={{ marginBottom: '16px' }}>
+                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Expense Type *</label>
+                {loadingCatalog ? (
+                  <div className="search-input" style={{ height: '44px', display: 'flex', alignItems: 'center', color: 'var(--gray)' }}>Loading types...</div>
+                ) : (
+                  <select 
+                    className="search-input" 
+                    style={{ height: '44px', width: '100%', borderRadius: 10, border: '1px solid var(--border)', padding: '0 12px' }} 
+                    value={form.expense_catalog_id} 
+                    onChange={(e) => handleCatalogItemChange(e.target.value)}
+                  >
+                    <option value="">— Select type —</option>
+                    {catalogItems.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.category})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '16px' }}>
+                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>
+                  Amount (₹) * {selectedCatalogItem?.expense_mode === 'fixed' && '(Fixed Mode)'}
+                </label>
+                <input 
+                  className="search-input" 
+                  style={{ height: '44px', width: '100%', borderRadius: 10, border: '1px solid var(--border)', padding: '0 12px' }} 
+                  type="number" 
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00" 
+                  value={form.amount} 
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  disabled={selectedCatalogItem?.expense_mode === 'fixed'}
+                  required
+                />
+                {selectedCatalogItem && (
+                  <div style={{ fontSize: 11, color: selectedCatalogItem.expense_mode === 'fixed' ? 'var(--gray)' : 'var(--amber)', marginTop: 4 }}>
+                    {selectedCatalogItem.expense_mode === 'fixed' 
+                      ? '🔒 Enforced default price.' 
+                      : '✍️ Enter manually. Receipt upload is mandatory.'}
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '16px' }}>
+                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Additional Details / Notes (optional)</label>
+                <textarea 
+                  className="search-input" 
+                  style={{ height: '80px', width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--border)', fontFamily: 'inherit', resize: 'vertical' }} 
+                  placeholder="Optional details or context..." 
+                  value={form.notes} 
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })} 
+                />
+              </div>
+
+              <div className="admin-form-group" style={{ marginBottom: '20px' }}>
+                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>
+                  Upload Receipt {selectedCatalogItem?.expense_mode === 'custom' ? '(Mandatory *)' : '(Optional)'}
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/*,application/pdf"
+                  style={{ display: 'none' }}
+                  id="bill-upload-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setBillFile(file)
+                  }}
+                  disabled={uploading || createMutation.isPending}
+                />
+                <label 
+                  htmlFor="bill-upload-input"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    padding: '20px',
+                    border: `2px dashed ${
+                      billFile 
+                        ? 'var(--green)' 
+                        : selectedCatalogItem?.expense_mode === 'custom' 
+                          ? 'var(--amber)' 
+                          : '#eaeaea'
+                    }`,
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    background: '#fafafa',
+                    textAlign: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" strokeWidth="2" style={{ marginBottom: '8px' }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                    {billFile ? billFile.name : 'Click to upload receipt (PDF/Image)'}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--gray)', marginTop: '4px' }}>
+                    {selectedCatalogItem?.expense_mode === 'custom' && !billFile ? (
+                      <span style={{ color: 'var(--red)', fontWeight: 600 }}>⚠️ Required for Custom Mode</span>
+                    ) : (
+                      'Max size: 5MB'
+                    )}
+                  </span>
+                </label>
+              </div>
+
+              <div className="action-buttons" style={{ display: 'flex', gap: 10, marginTop: '24px' }}>
+                <button 
+                  className="btn-secondary" 
+                  style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600 }} 
+                  onClick={() => setStep('verified')} 
+                  disabled={uploading || createMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn-primary" 
+                  style={{ 
+                    flex: 2, 
+                    height: 44, 
+                    borderRadius: 10, 
+                    background: '#1A9B6C', 
+                    color: '#fff', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    fontWeight: 600, 
+                    justifyContent: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }} 
+                  onClick={() => createMutation.mutate()} 
+                  disabled={
+                    !form.expense_catalog_id ||
+                    !form.amount ||
+                    (selectedCatalogItem?.expense_mode === 'custom' && !billFile) ||
+                    uploading || 
+                    createMutation.isPending
+                  }
+                >
+                  {uploading ? 'Uploading...' : createMutation.isPending ? 'Saving...' : 'Submit Expense'}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
       <style>{`
         .tech-expense-container {
           display: flex;
@@ -200,6 +520,7 @@ export function BranchLogExpensePage() {
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
           padding: 32px;
           transition: all 0.3s ease;
+          height: fit-content;
         }
 
         .tech-icon-wrapper {
@@ -244,490 +565,18 @@ export function BranchLogExpensePage() {
         .search-input {
           flex: 1;
           height: 50px;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 0 16px;
-          font-size: 16px;
-          font-weight: 500;
-          color: #111827;
-          outline: none;
-          transition: border-color 0.2s;
-        }
-        
-        .search-input:focus {
-          border-color: #1A9B6C;
-          box-shadow: 0 0 0 3px rgba(26, 155, 108, 0.1);
-        }
-        
-        .search-input::placeholder {
-          color: #9ca3af;
-          font-weight: 400;
-        }
-
-        .btn-find {
-          height: 50px;
-          padding: 0 24px;
-          background: #1A9B6C;
-          color: white;
-          border: none;
-          border-radius: 12px;
-          font-weight: 600;
+          border: 1px solid #eaeaea;
+          border-radius: 14px;
+          padding: 0 18px;
           font-size: 15px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: background 0.2s;
-        }
-
-        .btn-find:hover {
-          background: #15825A;
-        }
-
-        .btn-find:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-
-        .chips-row {
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .chip {
-          padding: 6px 12px;
-          background: #f3f4f6;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #4b5563;
-          cursor: pointer;
+          outline: none;
           transition: all 0.2s;
         }
 
-        .chip:hover {
-          background: #e5e7eb;
-          color: #111827;
-        }
-
-        .chip-hint {
-          font-size: 12px;
-          color: #9ca3af;
-          margin-left: 4px;
-        }
-
-        .verification-card {
-          margin-top: 32px;
-          background: #eef8f3;
-          border: 1px solid #d1eedf;
-          border-radius: 16px;
-          padding: 24px;
-          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .vc-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 24px;
-        }
-
-        .vc-title {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 18px;
-          font-weight: 700;
-          color: #111827;
-          margin-bottom: 4px;
-        }
-
-        .vc-location {
-          font-size: 13px;
-          color: #4b5563;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .vc-badge {
-          text-align: right;
-        }
-
-        .vc-badge-text {
-          font-size: 10px;
-          font-weight: 700;
-          color: #1A9B6C;
-          letter-spacing: 0.05em;
-          margin-bottom: 2px;
-        }
-
-        .vc-badge-code {
-          font-family: 'Space Grotesk', sans-serif;
-          font-size: 16px;
-          font-weight: 700;
-          color: #1A9B6C;
-        }
-
-        .history-section {
-          border-top: 1px solid #d1eedf;
-          padding-top: 16px;
-        }
-
-        .history-title {
-          font-size: 11px;
-          font-weight: 600;
-          color: #4b5563;
-          letter-spacing: 0.05em;
-          margin-bottom: 12px;
-        }
-
-        .history-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .history-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 13px;
-        }
-
-        .history-item-left {
-          color: #4b5563;
-        }
-
-        .status-badge {
-          padding: 4px 8px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .status-badge::before {
-          content: '';
-          display: block;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-        }
-
-        .status-badge.pending {
-          background: #fff7ed;
-          color: #c2410c;
-        }
-        .status-badge.pending::before { background: #ea580c; }
-
-        .status-badge.approved {
-          background: #ecfdf5;
-          color: #047857;
-        }
-        .status-badge.approved::before { background: #10b981; }
-
-        .status-badge.rejected {
-          background: #fef2f2;
-          color: #b91c1c;
-        }
-        .status-badge.rejected::before { background: #ef4444; }
-
-        .action-area {
-          margin-top: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          animation: fadeIn 0.5s ease 0.2s both;
-        }
-
-        .action-text {
-          font-size: 14px;
-          color: #4b5563;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn-secondary {
-          padding: 0 16px;
-          height: 44px;
-          background: #f3f4f6;
-          border: none;
-          border-radius: 10px;
-          font-weight: 500;
-          font-size: 14px;
-          color: #4b5563;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .btn-secondary:hover {
-          background: #e5e7eb;
-        }
-
-        .btn-primary {
-          padding: 0 20px;
-          height: 44px;
-          background: #1A9B6C;
-          border: none;
-          border-radius: 10px;
-          font-weight: 600;
-          font-size: 14px;
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: background 0.2s;
-        }
-
-        .btn-primary:hover {
-          background: #15825A;
-        }
-        
-        .error-message {
-          margin-top: 16px;
-          padding: 12px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #b91c1c;
-          border-radius: 12px;
-          font-size: 14px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          animation: fadeIn 0.3s ease;
+        .search-input:focus {
+          border-color: #1A9B6C;
         }
       `}</style>
-
-      <Topbar title="Log Expense" />
-      <div className="tech-expense-container page-view content">
-        <div className="tech-card">
-          
-          <div className="tech-icon-wrapper">
-            <div className="tech-icon-box">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                <rect x="6" y="14" width="12" height="8"></rect>
-              </svg>
-            </div>
-          </div>
-
-          <h1 className="tech-heading">Enter printer code</h1>
-          <p className="tech-subtitle">Find the code on the sticker at the back of the printer</p>
-
-          <div className="search-row">
-            <input 
-              type="text" 
-              className="search-input" 
-              placeholder="E.G. SP-001"
-              value={printerCode}
-              onChange={(e) => setPrinterCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && handleFind()}
-              disabled={step === 'loading' || step === 'verified' || step === 'form'}
-            />
-            <button 
-              className="btn-find" 
-              onClick={handleFind}
-              disabled={!printerCode.trim() || step === 'loading' || step === 'verified' || step === 'form'}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              Find
-            </button>
-          </div>
-
-          {(step === 'initial' || step === 'error' || step === 'loading') && quickChips.length > 0 && (
-            <div className="chips-row">
-              {quickChips.map(chip => (
-                <button 
-                  key={chip} 
-                  className="chip"
-                  onClick={() => {
-                    setPrinterCode(chip)
-                    handleFindCode(chip)
-                  }}
-                  disabled={step === 'loading'}
-                >
-                  {chip}
-                </button>
-              ))}
-              <span className="chip-hint">← tap your assigned printers</span>
-            </div>
-          )}
-
-          {step === 'error' && (
-            <div className="error-message">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-              Printer not found or not assigned to you.
-            </div>
-          )}
-
-          {(step === 'verified' || step === 'form') && foundPrinter && (
-            <div className="verification-card">
-              <div className="vc-header">
-                <div>
-                  <div className="vc-title">{foundPrinter.name}</div>
-                  <div className="vc-location">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                      <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    {foundPrinter.location}
-                  </div>
-                </div>
-                <div className="vc-badge">
-                  <div className="vc-badge-text">CODE VERIFIED</div>
-                  <div className="vc-badge-code">{foundPrinter.displayCode}</div>
-                </div>
-              </div>
-
-              <div className="history-section">
-                <div className="history-title">LAST SERVICE: {mockServiceHistory[0].date.toUpperCase()}</div>
-                <div className="history-list">
-                  {mockServiceHistory.map((history, idx) => (
-                    <div className="history-item" key={idx}>
-                      <div className="history-item-left">
-                        {history.date} - {history.items}
-                      </div>
-                      <div className={`status-badge ${history.status}`}>
-                        {history.status}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 'verified' && (
-            <div className="action-area">
-              <div className="action-text">Is this the correct printer?</div>
-              <div className="action-buttons">
-                <button className="btn-secondary" onClick={handleNotThisOne}>
-                  Not this one
-                </button>
-                <button className="btn-primary" onClick={handleYesLogExpense}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  Yes — log expense
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 'form' && (
-            <div style={{ marginTop: '32px', animation: 'fadeIn 0.4s ease' }}>
-              <div className="section-heading" style={{ marginBottom: '16px' }}>Expense Details</div>
-              
-              <div className="admin-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="admin-form-group">
-                  <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Type</label>
-                  <select className="search-input" style={{ height: '44px', width: '100%' }} value={form.expense_type} onChange={(e) => {
-                    const type = e.target.value as 'variable' | 'fixed'
-                    setForm({ ...form, expense_type: type, category: CATEGORIES[type][0] })
-                  }}>
-                    <option value="variable">Variable</option>
-                    <option value="fixed">Fixed</option>
-                  </select>
-                </div>
-                <div className="admin-form-group">
-                  <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Category</label>
-                  <select className="search-input" style={{ height: '44px', width: '100%' }} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                    {CATEGORIES[form.expense_type].map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="admin-form-group" style={{ marginBottom: '16px', marginTop: '16px' }}>
-                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
-                <input className="search-input" style={{ height: '44px', width: '100%' }} type="number" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-              </div>
-
-              <div className="admin-form-group" style={{ marginBottom: '16px' }}>
-                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>Notes</label>
-                <textarea className="search-input" style={{ height: '80px', width: '100%', padding: '12px', fontFamily: 'inherit' }} placeholder="Optional notes/bill details..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
-
-              <div className="admin-form-group" style={{ marginBottom: '16px' }}>
-                <label className="admin-form-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray)', display: 'block', marginBottom: '6px' }}>
-                  Upload Bill / Receipt
-                </label>
-                <input 
-                  type="file" 
-                  accept="image/*,application/pdf"
-                  style={{ display: 'none' }}
-                  id="bill-upload-input"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null
-                    setBillFile(file)
-                  }}
-                  disabled={uploading || createMutation.isPending}
-                />
-                <label 
-                  htmlFor="bill-upload-input"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    padding: '16px',
-                    border: '2px dashed #eaeaea',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: '#fafafa',
-                    textAlign: 'center',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = '#1A9B6C'}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = '#eaeaea'}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gray)" strokeWidth="2" style={{ marginBottom: '8px' }}>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ink)' }}>
-                    {billFile ? billFile.name : 'Click to upload receipt (PDF/Image)'}
-                  </span>
-                  <span style={{ fontSize: '11px', color: 'var(--gray)', marginTop: '4px' }}>
-                    {billFile ? `${(billFile.size / 1024 / 1024).toFixed(2)} MB` : 'Max size: 5MB'}
-                  </span>
-                </label>
-              </div>
-
-              <div className="action-buttons" style={{ marginTop: '24px' }}>
-                <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setStep('verified')} disabled={uploading || createMutation.isPending}>
-                  Cancel
-                </button>
-                <button className="btn-primary" style={{ flex: 2, justifyContent: 'center' }} onClick={() => createMutation.mutate()} disabled={!form.amount || uploading || createMutation.isPending}>
-                  {uploading ? 'Uploading receipt...' : createMutation.isPending ? 'Saving...' : 'Save Expense'}
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
     </>
   )
 }

@@ -1,6 +1,13 @@
 export type UserRole = 'investor' | 'branch_ambassador' | 'admin'
-export type KioskStatus = 'active' | 'pending' | 'pending_installation' | 'offline' | 'maintenance' | 'suspended'
+export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance' | 'suspended'
 export type ExpenseType = 'variable' | 'fixed'
+/**
+ * Expense approval workflow statuses.
+ *   pending  – submitted by Branch Ambassador, awaiting admin review.
+ *   approved – admin has approved; counts in investor P&L reports.
+ *   rejected – admin has rejected; does NOT count in reports.
+ */
+export type ExpenseStatus = 'pending' | 'approved' | 'rejected'
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled'
 export type PaymentType = 'payout' | 'withdrawal' | 'investment'
 export type KycStatus = 'pending' | 'verified' | 'rejected' | 'unverified'
@@ -185,14 +192,35 @@ export interface Expense {
   period_end: string
   period_type: string
   notes: string | null
-  status: 'pending' | 'approved' | 'rejected'
-  admin_remarks: string | null
-  bill_url: string | null
+  expense_name?: string | null
+  expense_catalog_id?: string | null
+
+  // ── Approval workflow ─────────────────────────────────────────
+  /** pending | approved | rejected. Default: 'pending' */
+  status: ExpenseStatus
+  /** The investor (branch ambassador or admin) who submitted this expense */
+  submitted_by: string | null
+  /** Admin who approved or rejected */
   approved_by: string | null
   approved_at: string | null
+  /** Set when admin rejects */
+  rejected_at: string | null
+  /** Human-readable reason shown to the ambassador */
+  rejection_reason: string | null
+  /** Old field: same as rejection_reason, kept for backward compat */
+  admin_remarks: string | null
+  /** URL to uploaded bill/receipt image in Supabase Storage */
+  bill_url: string | null
+
+  // ── Audit ─────────────────────────────────────────────────────
+  /** The investor id who inserted the row (may differ from submitted_by for admin-created rows) */
   created_by: string | null
   created_at: string
+
+  // ── Relations (joined) ────────────────────────────────────────
   kiosk?: Kiosk
+  /** Joined from investors table via submitted_by FK */
+  submitted_by_investor?: Pick<Investor, 'id' | 'full_name' | 'email'>
 }
 
 export interface Payment {
@@ -274,3 +302,15 @@ export interface ExpenseBreakdown {
   color: string
   pct: number
 }
+
+export interface ExpenseCatalogItem {
+  id: string
+  name: string
+  category: string
+  default_amount: number
+  expense_mode: 'fixed' | 'custom'
+  description: string | null
+  is_active: boolean
+  created_at: string
+}
+

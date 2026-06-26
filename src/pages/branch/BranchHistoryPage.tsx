@@ -80,7 +80,7 @@ export function BranchHistoryPage() {
                   <th>Amount</th>
                   <th>Status</th>
                   <th>Receipt</th>
-                  <th>Admin Remarks</th>
+                  <th>{statusFilter === 'rejected' ? 'Rejection Reason' : 'Admin Remarks'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,14 +157,14 @@ export function BranchHistoryPage() {
                         )}
                       </td>
                       <td style={{ 
-                        color: exp.admin_remarks ? 'var(--ink)' : 'var(--gray)', 
-                        fontStyle: exp.admin_remarks ? 'normal' : 'italic',
+                        color: (exp.rejection_reason || exp.admin_remarks) ? 'var(--ink)' : 'var(--gray)', 
+                        fontStyle: (exp.rejection_reason || exp.admin_remarks) ? 'normal' : 'italic',
                         fontSize: '13px',
                         maxWidth: '280px',
                         whiteSpace: 'normal',
                         wordBreak: 'break-word'
                       }}>
-                        {exp.admin_remarks || 'No remarks added.'}
+                        {exp.rejection_reason || exp.admin_remarks || 'No remarks added.'}
                       </td>
                     </tr>
                   ))

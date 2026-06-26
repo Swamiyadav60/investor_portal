@@ -21,12 +21,13 @@ import { BranchDashboardPage } from '@/pages/branch/BranchDashboardPage'
 import { BranchPrintersPage } from '@/pages/branch/BranchPrintersPage'
 import { BranchLogExpensePage } from '@/pages/branch/BranchLogExpensePage'
 import { BranchHistoryPage } from '@/pages/branch/BranchHistoryPage'
+import { BranchMyExpensesPage } from '@/pages/branch/BranchMyExpensesPage'
 import { AdminCollegesPage } from '@/pages/admin/AdminCollegesPage'
 import { AdminInvestorsPage } from '@/pages/admin/AdminInvestorsPage'
 import { AdminKiosksPage } from '@/pages/admin/AdminKiosksPage'
-import { AdminInstallationsPage } from '@/pages/admin/AdminInstallationsPage'
 import { AdminRevenuePage } from '@/pages/admin/AdminRevenuePage'
 import { AdminExpensesPage } from '@/pages/admin/AdminExpensesPage'
+import { AdminExpenseCatalogPage } from '@/pages/admin/AdminExpenseCatalogPage'
 import { AdminWaitlistsPage } from '@/pages/admin/AdminWaitlistsPage'
 import { AdminPaymentsPage } from '@/pages/admin/AdminPaymentsPage'
 import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage'
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/branch/dashboard" element={<BranchDashboardPage />} />
               <Route path="/branch/printers" element={<BranchPrintersPage />} />
               <Route path="/branch/log-expense" element={<BranchLogExpensePage />} />
+              <Route path="/branch/my-expenses" element={<BranchMyExpensesPage />} />
               <Route path="/branch/history" element={<BranchHistoryPage />} />
             </Route>
 
@@ -69,9 +71,9 @@ export default function App() {
               <Route path="/admin/colleges" element={<AdminCollegesPage />} />
               <Route path="/admin/investors" element={<AdminInvestorsPage />} />
               <Route path="/admin/kiosks" element={<AdminKiosksPage />} />
-              <Route path="/admin/installations" element={<AdminInstallationsPage />} />
               <Route path="/admin/revenue" element={<AdminRevenuePage />} />
               <Route path="/admin/expenses" element={<AdminExpensesPage />} />
+              <Route path="/admin/expense-catalog" element={<AdminExpenseCatalogPage />} />
               <Route path="/admin/waitlists" element={<AdminWaitlistsPage />} />
               <Route path="/admin/payments" element={<AdminPaymentsPage />} />
               <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
