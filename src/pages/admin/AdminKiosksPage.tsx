@@ -141,15 +141,33 @@ export function AdminKiosksPage() {
 
         if (error) throw error
       } else {
-        const { error } = await supabase
-        .from('investor_kiosks')
-        .insert({
-          kiosk_id: kioskId,
-          investor_id: userId,
-          status: 'active'
-        })
+        const { data: existing } = await supabase
+  .from('investor_kiosks')
+  .select('id')
+  .eq('kiosk_id', kioskId)
+  .maybeSingle()
 
-        if (error) throw error
+if (existing) {
+  const { error } = await supabase
+    .from('investor_kiosks')
+    .update({
+      investor_id: userId,
+      status: 'active'
+    })
+    .eq('id', existing.id)
+
+  if (error) throw error
+} else {
+  const { error } = await supabase
+    .from('investor_kiosks')
+    .insert({
+      kiosk_id: kioskId,
+      investor_id: userId,
+      status: 'active'
+    })
+
+  if (error) throw error
+}
       }
     },
     onSuccess: async () => {
