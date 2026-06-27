@@ -2,8 +2,7 @@ name: Daily Revenue Sync
 
 on:
   schedule:
-    # Runs every day at 6:30 PM UTC = 12:00 AM IST
-    - cron: '30 18 * * *'
+    - cron: "*/5 * * * *"
 
   workflow_dispatch:
 
