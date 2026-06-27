@@ -1,8 +1,7 @@
 name: Daily Revenue Sync
 
 on:
-  schedule: 
-
+  schedule:
     - cron: "*/5 * * * *"
 
   workflow_dispatch:
@@ -15,5 +14,4 @@ jobs:
       - name: Call Supabase Edge Function
         run: |
           curl -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_FUNCTION_SECRET }}"
