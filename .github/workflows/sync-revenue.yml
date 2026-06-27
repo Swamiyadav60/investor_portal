@@ -1,7 +1,8 @@
 name: Daily Revenue Sync
 
 on:
-  schedule:
+  schedule: 
+  
     - cron: "*/5 * * * *"
 
   workflow_dispatch:
