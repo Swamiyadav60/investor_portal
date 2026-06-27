@@ -10,44 +10,58 @@ const mySupabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const secret = Deno.env.get("SYNC_SECRET");
+
+  if (req.headers.get("x-sync-secret") !== secret) {
+    return new Response("Unauthorized", {
+      status: 401,
+    });
+  }
+
   try {
     // Read one revenue row from friend's DB
-    const { data: revenues, error: revenueError } = await friendSupabase
-      .from("branch_daily_revenue")
-      .select("*");
+    const fromDate = new Date();
+fromDate.setDate(fromDate.getDate() - 7);
+
+const { data: revenues, error: revenueError } = await friendSupabase
+  .from("branch_daily_revenue")
+  .select("*")
+  .gte("revenue_date", fromDate.toISOString().split("T")[0]);
 
     if (revenueError) throw revenueError;
     let synced = 0;
     let skipped = 0;
 
+    const { data: mappings, error: mappingLoadError } = await mySupabase
+  .from("branch_mapping")
+  .select("friend_branch_id, my_kiosk_id");
+
+if (mappingLoadError) throw mappingLoadError;
+
+const mappingMap = new Map<string, string>(
+  (mappings ?? []).map((m: {
+    friend_branch_id: string;
+    my_kiosk_id: string;
+  }) => [m.friend_branch_id, m.my_kiosk_id])
+);
+const kiosksToUpdate = new Set<string>();
     for (const revenue of revenues ?? []) {
 
     // Find kiosk mapping
-    const { data: mapping, error: mappingError } = await mySupabase
-      .from("branch_mapping")
-      .select("my_kiosk_id")
-      .eq("friend_branch_id", revenue.branch_id)
-      .single();
-    if (mappingError) {
-      console.error("Mapping error:", mappingError);
-      skipped++;
-      continue;
-    }
+    const kioskId = mappingMap.get(revenue.branch_id);
 
-    if (!mapping) {
-      console.log(`No mapping found for ${revenue.branch_name}`);
-      skipped++;
-      continue;
-    }
-
+if (!kioskId) {
+    skipped++;
+    continue;
+}
     // Save into your revenues table
     const { error: insertError } = await mySupabase
       .from("revenues")
       .upsert(
         {
           friend_branch_id: revenue.branch_id,
-          kiosk_id: mapping.my_kiosk_id,
+          kiosk_id: kioskId,
 
           amount:
             Number(revenue.upi_revenue) +
@@ -69,11 +83,22 @@ Deno.serve(async () => {
 
       if (insertError) throw insertError;
 
+        kiosksToUpdate.add(kioskId);
+
       synced++;
     
 
     
     }
+    for (const kioskId of kiosksToUpdate) {
+  const { error } = await mySupabase.rpc("update_kiosk_stats", {
+    p_kiosk_id: kioskId,
+  });
+
+  if (error) {
+    console.error(`Failed to update stats for ${kioskId}:`, error);
+  }
+}
 
     return new Response(
   JSON.stringify({
