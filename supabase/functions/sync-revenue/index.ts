@@ -89,6 +89,19 @@ Deno.serve(async () => {
   }
 );
   } catch (err) {
-    console.error(err);
-  }
+  console.error(err);
+
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    }),
+    {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+}
 });
