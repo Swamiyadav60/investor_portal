@@ -84,8 +84,12 @@ export function PayoutsPage() {
       0
     )
 
+  const netProfit = totalRevenue - totalExpenses
+
+  const profitPercentage = Number(investor?.profit_share ?? 70)
+
   const investorProfit =
-    (totalRevenue - totalExpenses) * 0.7
+    netProfit * (profitPercentage / 100)
   const totalPaid =
     payouts.reduce(
       (sum, p) =>

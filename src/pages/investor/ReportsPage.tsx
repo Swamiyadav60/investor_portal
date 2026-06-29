@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 export function ReportsPage() {
  
   const { investor } = useAuth()
+  const profitPercentage = Number(investor?.profit_share ?? 70)
 
 const { data } = useQuery({
   queryKey: ['reports', investor?.id],
@@ -129,7 +130,7 @@ const totalFix = reportMonths.reduce(
 
 const totalProfit = totalRev - totalVar - totalFix
 
-const totalShare = totalProfit * 0.7
+const totalShare = totalProfit * (profitPercentage / 100)
 const totalJobs =
   reportMonths.reduce(
     (sum, r) => sum + Number(r.jobs || 0),0
@@ -145,7 +146,8 @@ const totalJobs =
           'Variable Expenses': r.var_,
           'Fixed Expenses': r.fix_,
           'Net Profit': profit,
-          'Your Share (70%)': profit * 0.7,
+          [`Your Share (${profitPercentage}%)`]:
+            profit * (profitPercentage / 100),
         }
       }),
       'Smart_Printer-monthly-pl.csv'
@@ -191,13 +193,13 @@ const totalJobs =
               <thead>
                 <tr>
                   <th>Month</th><th>Revenue</th><th>Var. Expenses</th>
-                  <th>Fixed Expenses</th><th>Net Profit</th><th>Your Share (70%)</th>
+                  <th>Fixed Expenses</th><th>Net Profit</th><th>Your Share ({profitPercentage}%)</th>
                 </tr>
               </thead>
               <tbody>
                 {reportMonths.map((r) => {
                   const profit = r.rev - r.var_ - r.fix_
-                  const share = profit * 0.7
+                  const share = profit * (profitPercentage / 100)
                 
                   return (
                     <tr key={r.month}>
