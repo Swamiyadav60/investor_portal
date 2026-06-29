@@ -93,9 +93,9 @@ export function PayoutsPage() {
   const totalPaid =
     payouts.reduce(
       (sum, p) =>
-        p.status === 'success'
-          ? sum + Number(p.amount)
-          : sum,
+       ['success', 'paid'].includes(p.status)
+        ? sum + Number(p.amount)
+        : sum,
       0
     )
   const availableBalance =
@@ -148,9 +148,9 @@ export function PayoutsPage() {
             <div className="rpt-kpi-val">{fmt(
               payouts.reduce(
                 (sum, p) =>
-                  p.status === 'success'
-                    ? sum + Number(p.amount)
-                    : sum,
+                  ['success', 'paid'].includes(p.status)
+                  ?sum + Number(p.amount)
+                  : sum,
                 0
               )
             )}</div>
@@ -235,7 +235,7 @@ export function PayoutsPage() {
                           >
                             Pending
                           </span>
-                        ) : p.status === 'success' ? (
+                        ) : ['success', 'paid'].includes(p.status) ? (
                           <span
                             style={{
                               background: 'var(--green-l)',
@@ -246,7 +246,7 @@ export function PayoutsPage() {
                               borderRadius: 999
                             }}
                           >
-                            Success
+                            Paid
                           </span>
                         ) : (
                           <span
