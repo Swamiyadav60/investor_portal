@@ -140,23 +140,38 @@ async function fetchLiveStats(
   // 3. Investment + payouts (not period-scoped)
   const kiosksQ  = supabase.from('kiosks').select('investment_amount').in('id', kioskIds)
   const payoutsQ = supabase.from('payments').select('amount, status').eq('investor_id', investorId)
+  const investorQ = supabase
+  .from('investors')
+  .select('profit_share')
+  .eq('id', investorId)
+  .single()
 
   // 4. Fire all queries in parallel
   const [
-    { data: currRevenues },
-    { data: currExpenses },
-    { data: prevRevenues },
-    { data: prevExpenses },
-    { data: kiosks },
-    { data: payouts },
-  ] = await Promise.all([currRevQ, currExpQ, prevRevQ, prevExpQ, kiosksQ, payoutsQ])
+  { data: currRevenues },
+  { data: currExpenses },
+  { data: prevRevenues },
+  { data: prevExpenses },
+  { data: kiosks },
+  { data: payouts },
+  { data: investor },
+] = await Promise.all([
+  currRevQ,
+  currExpQ,
+  prevRevQ,
+  prevExpQ,
+  kiosksQ,
+  payoutsQ,
+  investorQ,
+])
 
   // 5. Current period totals
   const revenue         = currRevenues?.reduce((s, r) => s + Number(r.amount), 0) || 0
   const variableExpenses = currExpenses?.filter(e => e.expense_type === 'variable').reduce((s, e) => s + Number(e.amount), 0) || 0
   const fixedExpenses    = currExpenses?.filter(e => e.expense_type === 'fixed').reduce((s, e) => s + Number(e.amount), 0) || 0
   const netProfit        = revenue - variableExpenses - fixedExpenses
-  const investorProfit   = netProfit * 0.7
+  const profitShare = Number(investor?.profit_share ?? 70)
+  const investorProfit = netProfit * (profitShare / 100)
 
   // 6. Previous period totals
   const prevRevenue    = prevRevenues?.reduce((s, r) => s + Number(r.amount), 0) || 0
