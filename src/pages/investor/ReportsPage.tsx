@@ -4,6 +4,23 @@ import { fmt, exportToCSV} from '@/lib/format'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+function formatDate(dateStr: string | null | undefined, periodStartStr: string) {
+  if (!dateStr) {
+    const d = new Date(periodStartStr)
+    if (isNaN(d.getTime())) return 'Unknown'
+    return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+  }
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) {
+    const fallback = new Date(periodStartStr)
+    if (isNaN(fallback.getTime())) return 'Unknown'
+    return fallback.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+  }
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = d.toLocaleString('en-US', { month: 'short' })
+  const year = d.getFullYear()
+  return `${day} ${month} ${year}`
+}
 
 export function ReportsPage() {
  
@@ -75,35 +92,34 @@ const { data } = useQuery({
           .filter(e => e.expense_type === 'fixed')
           .reduce((s, e) => s + Number(e.amount), 0)
 
-      
-      
-
       return {
-  month: new Date(r.period_start)
-    .toLocaleString('en-US', {
-      month: 'short',
-      year: 'numeric'
-    }),
-
-  rev: Number(r.amount),
-  var_: variable,
-  fix_: fixed,
-  jobs: Number((r as any).print_jobs || 0)
-}
+        id: r.id,
+        date: formatDate(r.created_at, r.period_start),
+        rawDate: r.created_at || r.period_start,
+        rev: Number(r.amount),
+        var_: variable,
+        fix_: fixed,
+        jobs: Number((r as any).print_jobs || 0)
+      }
     })
-    const recoveredTotal =
-  payouts?.reduce(
-    (sum, p) =>
-      p.status === 'success'
-        ? sum + Number(p.amount)
-        : sum,
-    0
-  ) || 0
 
-return {
-  reportData,
-  recoveredTotal
-}
+    const sortedReportData = reportData.sort((a, b) => {
+      return new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime()
+    })
+
+    const recoveredTotal =
+      payouts?.reduce(
+        (sum, p) =>
+          p.status === 'success'
+            ? sum + Number(p.amount)
+            : sum,
+        0
+      ) || 0
+
+    return {
+      reportData: sortedReportData,
+      recoveredTotal
+    }
     
   }
 })
@@ -141,7 +157,7 @@ const totalJobs =
       reportMonths.map((r) => {
         const profit = r.rev - r.var_ - r.fix_
         return {
-          Month: `${r.month} `,
+          Date: `${r.date} `,
           Revenue: r.rev,
           'Variable Expenses': r.var_,
           'Fixed Expenses': r.fix_,
@@ -192,7 +208,7 @@ const totalJobs =
             <table className="rpt-table">
               <thead>
                 <tr>
-                  <th>Month</th><th>Revenue</th><th>Var. Expenses</th>
+                  <th>Date</th><th>Revenue</th><th>Var. Expenses</th>
                   <th>Fixed Expenses</th><th>Net Profit</th><th>Your Share ({profitPercentage}%)</th>
                 </tr>
               </thead>
@@ -202,8 +218,8 @@ const totalJobs =
                   const share = profit * (profitPercentage / 100)
                 
                   return (
-                    <tr key={r.month}>
-                      <td>{r.month}</td>
+                    <tr key={r.id}>
+                      <td>{r.date}</td>
                       <td>{fmt(r.rev)}</td>
                       <td style={{ color: 'var(--red)' }}>{fmt(r.var_)}</td>
                       <td style={{ color: 'var(--amber)' }}>{fmt(r.fix_)}</td>
@@ -256,9 +272,9 @@ const totalJobs =
               <div className="rpt-card-title">Download statements</div>
             </div>
             {reportMonths.map((r) => (
-              <div key={r.month} className="rpt-dl-item">
+              <div key={r.id} className="rpt-dl-item">
                 <div>
-                  <div className="rpt-dl-name">{r.month} — P&L Statement</div>
+                  <div className="rpt-dl-name">{r.date} — P&L Statement</div>
                   <div className="rpt-dl-meta">PDF · All  kiosks</div>
                 </div>
                 <button className="rpt-dl-btn" onClick={handleExport}>↓ CSV</button>
