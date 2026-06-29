@@ -178,11 +178,13 @@ async function fetchLiveStats(
   const prevVarExp     = prevExpenses?.filter(e => e.expense_type === 'variable').reduce((s, e) => s + Number(e.amount), 0) || 0
   const prevFixExp     = prevExpenses?.filter(e => e.expense_type === 'fixed').reduce((s, e) => s + Number(e.amount), 0) || 0
   const prevNetProfit  = prevRevenue - prevVarExp - prevFixExp
+  
 
   // 7. Investment recovery
   const investment  = kiosks?.reduce((s, k) => s + Number(k.investment_amount || 0), 0) || 0
-  const recovered   = payouts?.filter(p => p.status === 'success').reduce((s, p) => s + Number(p.amount), 0) || 0
-
+  const recovered =
+  payouts?.filter(p => ['success', 'paid'].includes(p.status))
+    .reduce((s, p) => s + Number(p.amount), 0) || 0
   // 8. Jobs + occupancy
   const jobs      = currRevenues?.reduce((s, r) => s + Number(r.print_jobs || 0), 0) || 0
   const occupancy = jobs > 0 ? Math.min(Math.round((jobs / 1000) * 100), 100) : 0
