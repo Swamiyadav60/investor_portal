@@ -6,8 +6,14 @@ interface ROIProgressProps {
 }
 
 export function ROIProgress({ investment, recovered }: ROIProgressProps) {
-  const pct = Math.min(100, Math.round(recovered / investment * 100))
-  const remaining = Math.max(0, investment - recovered)
+  const pct =
+  investment > 0
+    ? Math.min(100, Math.round((recovered / investment) * 100))
+    : 0
+  const remaining =
+  investment > 0
+    ? Math.max(0, investment - recovered)
+    : 0
 
   return (
     <div className="progress-card">
@@ -22,7 +28,7 @@ export function ROIProgress({ investment, recovered }: ROIProgressProps) {
         <div className="progress-fill" style={{ width: `${pct}%` }} />
       </div>
       <div className="progress-labels">
-        <span>₹0</span>
+        <span>{fmt(recovered)}</span>
         <span>{fmt(investment)}</span>
       </div>
       <div style={{ marginTop: 10, fontSize: 11, color: 'var(--gray)' }}>
