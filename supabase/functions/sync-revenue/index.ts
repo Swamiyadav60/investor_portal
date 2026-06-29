@@ -63,13 +63,9 @@ if (!kioskId) {
           friend_branch_id: revenue.branch_id,
           kiosk_id: kioskId,
 
-          amount:
-            Number(revenue.upi_revenue) +
-            Number(revenue.wallet_amount),
+          amount: Number(revenue.upi_revenue),
 
-          print_jobs:
-            Number(revenue.upi_jobs) +
-            Number(revenue.wallet_jobs),
+          print_jobs: Number(revenue.upi_jobs),
 
           period_start: revenue.revenue_date,
           period_end: revenue.revenue_date,
