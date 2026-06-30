@@ -274,7 +274,17 @@ export function LandingPage() {
               return (
                 <div key={s.id} className="av-card">
                   <div className="av-img-wrap" style={{ position: 'relative' }}>
-                    <div className="av-img-placeholder">{s.name[0]}</div>
+                    {s.image_url ? (
+                      <img
+                        src={s.image_url}
+                        alt={s.name}
+                        className="av-img"
+                      />
+                    ) : (
+                      <div className="av-img-placeholder">
+                        {s.name[0]}
+                      </div>
+                    )}
                     <span className={`av-badge ${s.tag}`}>{s.tag_label}</span>
 
                     {/* Overlay for full or already reserved */}
