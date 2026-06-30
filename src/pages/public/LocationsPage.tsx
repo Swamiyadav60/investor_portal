@@ -6,12 +6,10 @@ import { AuthModal } from '@/components/auth/AuthModal'
 import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Topbar } from '@/components/layout/Topbar'
 import type { College } from '@/types/database'
 
 export function LocationsPage() {
-  const { investor, isAdmin } = useAuth()
+  const { investor } = useAuth()
   const [colleges, setColleges] = useState<College[]>([])
   const [reservedCollegeIds, setReservedCollegeIds] = useState<Set<string>>(new Set())
   const [slotFilter, setSlotFilter] = useState('all')
