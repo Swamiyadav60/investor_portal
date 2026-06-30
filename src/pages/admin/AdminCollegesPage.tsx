@@ -35,6 +35,7 @@ export function AdminCollegesPage() {
   const [form, setForm] = useState<CollegeForm>(initialFormState)
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (editingCollege) {
@@ -59,32 +60,61 @@ export function AdminCollegesPage() {
   return data || []
 }
   })
+  async function uploadCollegeImage(file: File) {
+  const fileName = `${Date.now()}-${file.name}`
 
+  const { error } = await supabase.storage
+    .from('college-images')
+    .upload(fileName, file)
+
+  if (error) throw error
+
+  const { data } = supabase.storage
+    .from('college-images')
+    .getPublicUrl(fileName)
+
+  return data.publicUrl
+}
   const createUpdateMutation = useMutation({
     mutationFn: async (collegeData: CollegeForm) => {
-  if (collegeData.id) {
-    const { id, ...updateData } = collegeData
+      let imageUrl: string | undefined
 
-    const { error } = await supabase
-      .from('colleges')
-      .update(updateData)
-      .eq('id', id)
+      if (imageFile) {
+        imageUrl = await uploadCollegeImage(imageFile)
+      }
+      if (collegeData.id) {
+        const { id, ...updateData } = collegeData
 
-    if (error) throw error
-  } else {
-    const { error } = await supabase
-      .from('colleges')
-      .insert(collegeData)
+        const payload = imageUrl
+        ? { ...updateData, image_url: imageUrl }
+        : updateData
 
-    if (error) throw error
-  }
-},
+        const { error } = await supabase
+        .from('colleges')
+        .update(payload)
+        .eq('id', id)
+
+        if (error) throw error
+      } else {
+        const payload = {
+          ...collegeData,
+          image_url: imageUrl ?? null,
+        }
+
+        const { error } = await supabase
+        .from('colleges')
+        .insert(payload)
+
+        if (error) throw error
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-colleges'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] }) // Invalidate KPIs to update counts
       toast(`College ${editingCollege ? 'updated' : 'added'} successfully.`, 'success')
       setShowModal(false)
       setEditingCollege(null)
+      setImageFile(null)
     },
     onError: (err: any) => {
       toast(err.message || `Error ${editingCollege ? 'updating' : 'adding'} college.`, 'error')
@@ -113,11 +143,13 @@ export function AdminCollegesPage() {
   const openAddModal = () => {
     setEditingCollege(null)
     setShowModal(true)
+    setImageFile(null)
   }
 
   const openEditModal = (college: College) => {
     setEditingCollege(college)
     setShowModal(true)
+    setImageFile(null)
   }
 
   const handleDelete = (collegeId: string) => {
@@ -231,6 +263,27 @@ export function AdminCollegesPage() {
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
                 </select>
+              </div>
+              <div className="admin-form-group" style={{ marginBottom: '.75rem' }}>
+                <label className="admin-form-label">College Image</label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="admin-form-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                     if (file) {
+                      setImageFile(file)
+                    }
+                  }}
+                />
+
+                {imageFile && (
+                  <p style={{ marginTop: 6, fontSize: 12 }}>
+                    Selected: {imageFile.name}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', gap: '.5rem', marginTop: '1rem' }}>
                 <button className="admin-btn admin-btn-primary" onClick={() => createUpdateMutation.mutate(form)} disabled={createUpdateMutation.isPending}>

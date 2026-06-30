@@ -140,22 +140,34 @@ export function LocationsPage() {
 
           return (
             <div key={s.id} className="av-card">
-              <div className="av-img-wrap">
-                {s.image_url ? (
-                  <div className="av-img-wrap">
-                    <img
-                      src={s.image_url}
-                      alt={s.name}
-                      className="college-image"
-                    />
-                  </div>
-                ) : (
-                  <div className="av-img-placeholder">
-                    {s.name[0]}
-                  </div>
-                )}
-                <span className={`av-badge ${s.tag}`}>{s.tag_label}</span>
+              <div
+  className="av-img-wrap"
+  style={{
+    overflow: 'hidden',
+    position: 'relative',
+  }}
+>
+  {s.image_url ? (
+    <img
+  src={s.image_url}
+  alt={s.name}
+  style={{
+    width: "100%",
+    height: "240px",
+    display: "block",
+    objectFit: "cover",
+    borderRadius: "8px 8px 0 0",
+  }}
+/>
+  ) : (
+    <div className="av-img-placeholder">
+      {s.name[0]}
+    </div>
+  )}
 
+  <span className={`av-badge ${s.tag}`}>
+    {s.tag_label}
+  </span>
                 {/* Overlay badge for full or already reserved */}
                 {isBlocked && (
                   <div style={{

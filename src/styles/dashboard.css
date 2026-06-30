@@ -1707,7 +1707,19 @@ body {
   border-radius: 999px;
   letter-spacing: .04em
 }
-
+.av-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+.av-status-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
 .av-badge.hot {
   background: var(--amber-l);
   color: #9A5210
@@ -3695,12 +3707,10 @@ body {
 
 .av-img-wrap {
   position: relative;
-  height: 180px;
-  background: var(--gray-l);
+  height: 240px;
+  overflow: hidden;
   border-radius: 12px 12px 0 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--gray-l);
 }
 
 .av-img-placeholder {
@@ -5869,24 +5879,18 @@ body {
 
 .av-img-wrap {
   position: relative;
-  width: 100%;
-  height: 220px;
   overflow: hidden;
   border-radius: 8px 8px 0 0;
 }
 
-.av-img-wrap img {
+.college-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-.college-image {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover;
-}
+
 
 /* ==========================================
    SIGNUP, VERIFICATION & ONBOARDING STYLES
