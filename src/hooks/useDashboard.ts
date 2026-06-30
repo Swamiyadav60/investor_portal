@@ -21,20 +21,28 @@ function getPeriodBounds(period: 'monthly' | 'weekly') {
   const now = new Date()
 
   if (period === 'monthly') {
-    // Current month: e.g. Jun 1 → Jun 30
-    const currStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const currEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const year = now.getFullYear()
+const month = now.getMonth() + 1
 
-    // Previous month: e.g. May 1 → May 31
-    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const prevEnd   = new Date(now.getFullYear(), now.getMonth(), 0)
+const currStart = `${year}-${String(month).padStart(2, '0')}-01`
 
-    return {
-      currStart: currStart.toISOString().split('T')[0],
-      currEnd:   currEnd.toISOString().split('T')[0],
-      prevStart: prevStart.toISOString().split('T')[0],
-      prevEnd:   prevEnd.toISOString().split('T')[0],
-    }
+const lastDay = new Date(year, month, 0).getDate()
+const currEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+const prevMonth = month === 1 ? 12 : month - 1
+const prevYear = month === 1 ? year - 1 : year
+
+const prevStart = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`
+
+const prevLastDay = new Date(prevYear, prevMonth, 0).getDate()
+const prevEnd = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevLastDay).padStart(2, '0')}`
+
+return {
+  currStart,
+  currEnd,
+  prevStart,
+  prevEnd,
+}
   } else {
     // Current week: last 7 days
     const currStart = new Date(now.getTime() - 7  * 86400000)
