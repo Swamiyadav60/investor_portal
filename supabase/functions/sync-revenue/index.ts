@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   try {
     // Read one revenue row from friend's DB
     const fromDate = new Date();
-fromDate.setDate(fromDate.getDate() - 7);
+fromDate.setDate(fromDate.getDate() - 2);
 
 const { data: revenues, error: revenueError } = await friendSupabase
   .from("branch_daily_revenue")
@@ -70,6 +70,7 @@ if (!kioskId) {
           period_start: revenue.revenue_date,
           period_end: revenue.revenue_date,
           period_type: "daily",
+          created_at: revenue.created_at,
         },
         {
           onConflict: "friend_branch_id,period_start",

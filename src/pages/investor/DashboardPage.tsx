@@ -30,7 +30,7 @@ export function DashboardPage() {
 
 
   const jobs: number[] = []
-const maxJobs = 1
+  const maxJobs = 1
   
 
   if (!stats) return null
@@ -52,11 +52,11 @@ const maxJobs = 1
         {/* Expense + ROI row */}
         <div className="dash-middle-row">
           <ExpenseBreakdown
-  variableTotal={stats.variableExpenses}
-  fixedTotal={stats.fixedExpenses}
-  varBreakdown={[]}
-  fixBreakdown={[]}
-/>
+            variableTotal={stats.variableExpenses}
+            fixedTotal={stats.fixedExpenses}
+            varBreakdown={[]}
+            fixBreakdown={[]}
+          />
           <ROIProgress
             investment={stats.investment}
             totalShareEarned={stats.recovered}
@@ -65,14 +65,14 @@ const maxJobs = 1
 
         {/* Performance Chart */}
         <PerformanceChart
-  values={chartData?.values || []}
-  labels={chartData?.labels || []}
-  label={chartData?.label || ''}
-  metric={graphMetric}
-  interval={graphInterval}
-  onMetricChange={setGraphMetric}
-  onIntervalChange={setGraphInterval}
-/>
+          values={chartData?.values || []}
+          labels={chartData?.labels || []}
+          label={chartData?.label || ''}
+          metric={graphMetric}
+          interval={graphInterval}
+          onMetricChange={setGraphMetric}
+          onIntervalChange={setGraphInterval}
+        />
 
         {/* Stats row */}
         <div className="stats-row">
