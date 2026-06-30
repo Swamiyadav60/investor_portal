@@ -138,8 +138,18 @@ async function fetchLiveStats(
   }
 
   // 3. Investment + payouts (not period-scoped)
-  const kiosksQ  = supabase.from('kiosks').select('investment_amount').in('id', kioskIds)
-  const payoutsQ = supabase.from('payments').select('amount, status').eq('investor_id', investorId)
+  let kiosksQ = supabase
+  .from('kiosks')
+  .select('investment_amount')
+  .in('id', kioskIds)
+
+  if (kioskFilter) {
+    kiosksQ = kiosksQ.eq('id', kioskFilter)
+  }
+  const allRevenueQ = supabase
+  .from('revenues')
+  .select('amount')
+  .in('kiosk_id', kioskFilter ? [kioskFilter] : kioskIds)
   const investorQ = supabase
   .from('investors')
   .select('profit_share')
@@ -153,16 +163,16 @@ async function fetchLiveStats(
   { data: prevRevenues },
   { data: prevExpenses },
   { data: kiosks },
-  { data: payouts },
   { data: investor },
+  { data: allRevenues },
 ] = await Promise.all([
   currRevQ,
   currExpQ,
   prevRevQ,
   prevExpQ,
   kiosksQ,
-  payoutsQ,
   investorQ,
+  allRevenueQ,
 ])
 
   // 5. Current period totals
@@ -181,10 +191,17 @@ async function fetchLiveStats(
   
 
   // 7. Investment recovery
-  const investment  = kiosks?.reduce((s, k) => s + Number(k.investment_amount || 0), 0) || 0
-  const recovered =
-  payouts?.filter(p => ['success', 'paid'].includes(p.status))
-    .reduce((s, p) => s + Number(p.amount), 0) || 0
+const investment = kiosks?.reduce(
+  (s, k) => s + Number(k.investment_amount || 0),
+  0
+) || 0
+
+
+const totalRevenueEarned =
+  allRevenues?.reduce((s, r) => s + Number(r.amount), 0) || 0
+
+
+const recovered = totalRevenueEarned * (profitShare / 100)
   // 8. Jobs + occupancy
   const jobs      = currRevenues?.reduce((s, r) => s + Number(r.print_jobs || 0), 0) || 0
   const occupancy = jobs > 0 ? Math.min(Math.round((jobs / 1000) * 100), 100) : 0
@@ -310,4 +327,4 @@ export function useChartData(
       }
     },
   })
-}
+}

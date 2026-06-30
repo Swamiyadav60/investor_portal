@@ -57,7 +57,10 @@ const maxJobs = 1
   varBreakdown={[]}
   fixBreakdown={[]}
 />
-          <ROIProgress investment={stats.investment} recovered={stats.recovered} />
+          <ROIProgress
+            investment={stats.investment}
+            totalShareEarned={stats.recovered}
+          />
         </div>
 
         {/* Performance Chart */}

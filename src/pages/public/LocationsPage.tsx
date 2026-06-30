@@ -245,27 +245,7 @@ export function LocationsPage() {
     </>
   )
 
-  if (investor && !isAdmin) {
-    return (
-      <div className="app-shell">
-        <Sidebar admin={false} />
-        <div className="main">
-          <Topbar title="Available Locations" />
-          <div className="page-view content">
-            {renderContent()}
-          </div>
-          {selectedCollege && (
-            <InvestorWaitlistModal
-              college={selectedCollege}
-              isOpen={showReserveModal}
-              onClose={() => setShowReserveModal(false)}
-              onSuccess={handleReserveSuccess}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="public-root">
