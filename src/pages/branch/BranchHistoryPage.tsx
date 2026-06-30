@@ -17,7 +17,7 @@ export function BranchHistoryPage() {
       const { data, error } = await supabase
         .from('expenses')
         .select('*, kiosk:kiosks(name)')
-        .eq('created_by', investor!.id)
+        .eq('submitted_by', investor!.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error

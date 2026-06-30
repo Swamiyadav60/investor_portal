@@ -158,6 +158,11 @@ async function fetchLiveStats(
   .from('revenues')
   .select('amount')
   .in('kiosk_id', kioskFilter ? [kioskFilter] : kioskIds)
+  const allExpenseQ = supabase
+  .from('expenses')
+  .select('amount')
+  .eq('status', 'approved')
+  .in('kiosk_id', kioskFilter ? [kioskFilter] : kioskIds)
   const investorQ = supabase
   .from('investors')
   .select('profit_share')
@@ -173,6 +178,7 @@ async function fetchLiveStats(
   { data: kiosks },
   { data: investor },
   { data: allRevenues },
+  { data: allExpenses },
 ] = await Promise.all([
   currRevQ,
   currExpQ,
@@ -181,6 +187,7 @@ async function fetchLiveStats(
   kiosksQ,
   investorQ,
   allRevenueQ,
+  allExpenseQ,
 ])
 
   // 5. Current period totals
@@ -205,11 +212,15 @@ const investment = kiosks?.reduce(
 ) || 0
 
 
-const totalRevenueEarned =
-  allRevenues?.reduce((s, r) => s + Number(r.amount), 0) || 0
+const lifetimeRevenue =
+  allRevenues?.reduce((sum, r) => sum + Number(r.amount), 0) || 0
 
+  const lifetimeExpenses =
+    allExpenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
 
-const recovered = totalRevenueEarned * (profitShare / 100)
+  const lifetimeNetProfit = lifetimeRevenue - lifetimeExpenses
+
+  const recovered =lifetimeNetProfit * (profitShare / 100)
   // 8. Jobs + occupancy
   const jobs      = currRevenues?.reduce((s, r) => s + Number(r.print_jobs || 0), 0) || 0
   const occupancy = jobs > 0 ? Math.min(Math.round((jobs / 1000) * 100), 100) : 0
