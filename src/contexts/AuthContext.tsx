@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { getInitials } from '@/lib/format'
 import type { Investor, UserRole } from '@/types/database'
+import { TruckElectric } from 'lucide-react'
 
 export type SignUpResult = 'session' | 'confirm_email'
 
@@ -14,7 +15,7 @@ interface AuthContextType {
   isAdmin: boolean
   isInvestor: boolean
   isAmbassador: boolean
-  signInWithEmail: (email: string, password: string) => Promise<void>
+  signInWithEmail: (email: string, password: string, expectedRole?: UserRole) => Promise<Investor | null>
   signUpWithEmail: (
     email: string,
     password: string,
@@ -36,6 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [investor, setInvestor] = useState<Investor | null>(null)
   const [loading, setLoading] = useState(true)
+  // While true, the onAuthStateChange listener below ignores SIGNED_IN events.
+  // This prevents the global session/user state (and any route guards watching it)
+  // from updating before we've confirmed the account's role matches the selected tab.
+  const skipNextAuthEvent = useRef(false)
 
   const ensureInvestorProfile = async (
     userId: string,
@@ -147,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (skipNextAuthEvent.current) return
       setSession(s)
       setUser(s?.user ?? null)
       if (s?.user) fetchInvestor(s.user.id, s.user.email!)
@@ -181,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [])
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = async (email: string, password: string, expectedRole?: UserRole): Promise<Investor | null> => {
     if (!isSupabaseConfigured) {
       // Mock login for demo mode
       const mockUser = {
@@ -189,8 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         user_metadata: { full_name: 'Demo Investor' },
       } as any
-      setUser(mockUser)
-      setInvestor({
+      const mockInvestor = {
         id: 'mock-investor-profile-id',
         user_id: 'mock-investor-id',
         full_name: 'Demo Investor',
@@ -198,12 +203,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: '9876543210',
         role: 'investor',
         profile_completed: false, // will enforce onboarding modal
-      } as any)
-      return
+      } as any
+      setUser(mockUser)
+      setInvestor(mockInvestor)
+      return mockInvestor
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    skipNextAuthEvent.current = true
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      skipNextAuthEvent.current = false
+      throw error
+    }
+
+    if (expectedRole) {
+      const authedUser = data.user
+      if (!authedUser) {
+        await supabase.auth.signOut()
+        skipNextAuthEvent.current = false
+        throw new Error('Could not verify account role.')
+      }
+
+      const { data: profile } = await supabase
+        .from('decrypted_investors')
+        .select('*')
+        .eq('user_id', authedUser.id)
+        .maybeSingle()
+
+      const actualRole = profile?.role
+      // Investor tab covers both 'investor' and 'admin' accounts.
+      // Ambassador tab only covers 'branch_ambassador' accounts.
+      const isAllowed =
+        expectedRole === 'branch_ambassador'
+          ? actualRole === 'branch_ambassador'
+          : actualRole === 'investor' || actualRole === 'admin'
+
+      if (!isAllowed) {
+        await supabase.auth.signOut()
+        skipNextAuthEvent.current = false
+        setUser(null)
+        setSession(null)
+        setInvestor(null)
+        const err: any = new Error('ROLE_MISMATCH')
+        err.code = 'ROLE_MISMATCH'
+        throw err
+      }
+
+      // Role confirmed — now it's safe to commit the session globally.
+      skipNextAuthEvent.current = false
+      setSession(data.session)
+      setUser(authedUser)
+      setInvestor(profile as Investor)
+      return profile as Investor
+    }
+
+    skipNextAuthEvent.current = false
+    setSession(data.session)
+    setUser(data.user)
+    return null
   }
 
   const signUpWithEmail = async (

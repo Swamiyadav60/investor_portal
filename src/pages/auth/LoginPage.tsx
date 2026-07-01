@@ -20,7 +20,7 @@ export function LoginPage() {
   // Field validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const { signInWithEmail, investor, loginAsDemo } = useAuth()
+  const { signInWithEmail, loginAsDemo } = useAuth()
 
   const validateForm = () => {
     const errs: Record<string, string> = {}
@@ -53,24 +53,25 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      await signInWithEmail(email, password)
+      const profile = await signInWithEmail(email, password, selectedRole)
       toast('Logged in successfully.', 'success')
-      
-      setTimeout(() => {
-        const role = investor?.role
-        if (role === 'branch_ambassador') {
-          navigate('/branch/dashboard')
-        } else if (role === 'admin') {
-          navigate('/admin/colleges')
-        } else {
-          navigate('/dashboard')
-        }
-      }, 400)
-    } catch (err) {
-      const errMsg = getAuthErrorMessage(err)
+
+      const role = profile?.role
+      if (role === 'branch_ambassador') {
+        navigate('/branch/dashboardPage')
+      } else if (role === 'admin') {
+        navigate('/admin/colleges')
+      } else {
+        navigate('/dashboard')
+      }
+      setLoading(false)
+    } catch (err: any) {
+      const roleLabel = selectedRole === 'branch_ambassador' ? 'Ambassador' : 'Investor'
+      const errMsg = err?.code === 'ROLE_MISMATCH'
+        ? `This account is not registered as ${roleLabel}. Please select the correct role and try again.`
+        : getAuthErrorMessage(err)
       setError(errMsg)
       toast(errMsg, 'error')
-    } finally {
       setLoading(false)
     }
   }
@@ -80,8 +81,6 @@ export function LoginPage() {
     loginAsDemo(selectedRole)
     if (selectedRole === 'branch_ambassador') {
       navigate('/branch/dashboard')
-    } else if (selectedRole === 'admin') {
-      navigate('/admin/colleges')
     } else {
       navigate('/dashboard')
     }
