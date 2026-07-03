@@ -3,7 +3,6 @@ import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { getInitials } from '@/lib/format'
 import type { Investor, UserRole } from '@/types/database'
-import { TruckElectric } from 'lucide-react'
 
 export type SignUpResult = 'session' | 'confirm_email'
 
