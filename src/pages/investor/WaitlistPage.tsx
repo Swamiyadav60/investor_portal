@@ -16,9 +16,12 @@ export function WaitlistPage() {
     queryFn: async () => {
       if (!isSupabaseConfigured || !investor) return []
       const { data, error } = await supabase
-        .from('waitlists')
-        .select('*, college:colleges(*)')
-        .eq('investor_id', investor.id)
+        .from('branch_waitlist')
+        .select(`
+          *,
+          branch:branches(*)
+        `)
+        .eq('user_id', investor.id)
         .order('created_at', { ascending: false })
       
       if (error) throw error
@@ -29,7 +32,7 @@ export function WaitlistPage() {
 
   const upgradeMutation = useMutation({
     mutationFn: async ({ id, paymentId }: { id: string; paymentId: string }) => {
-      const { data, error } = await supabase.rpc('upgrade_to_priority', {
+      const { data, error } = await supabase.rpc('upgrade_branch_waitlist_priority', {
         p_waitlist_id: id,
         p_payment_id: paymentId,
       })
@@ -49,7 +52,7 @@ export function WaitlistPage() {
     try {
       await initiatePayment({
         amount: 499,
-        description: `Upgrade to Priority: ${w.college?.name}`,
+        description: `Upgrade to Priority: ${w.branch?.name}`,
         name: investor?.full_name || '',
         email: investor?.email || '',
         onSuccess: (res) => upgradeMutation.mutate({ id: w.id, paymentId: res.razorpay_payment_id }),
@@ -93,8 +96,8 @@ export function WaitlistPage() {
                   waitlists.map((w) => (
                     <tr key={w.id}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{w.college?.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--gray)' }}>{w.college?.city}</div>
+                        <div style={{ fontWeight: 600 }}>{w.branch?.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--gray)' }}>{w.branch?.location}</div>
                       </td>
                       <td>
                         <span className={`admin-badge ${w.status === 'approved' ? 'admin-badge-active' : 'admin-badge-pending'}`}>

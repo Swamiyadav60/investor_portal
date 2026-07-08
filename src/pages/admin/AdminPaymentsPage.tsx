@@ -3,47 +3,113 @@ import { Topbar } from '@/components/layout/Topbar'
 import { fmt, maskBankAccount } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
-import type { Payment } from '@/types/database'
+
+// Unified row shape merging `withdrawals` (payouts) and `transactions`
+// (everything else — investments, etc.) since the new schema splits what
+// used to be a single `payments` table into two.
+interface UnifiedPayment {
+  id: string
+  _source: 'withdrawal' | 'transaction'
+  user: { full_name: string; email: string } | null
+  payment_type: string
+  amount: number
+  status: string
+  account: string | null
+  razorpay_payment_id: string | null
+  notes: string | null
+  created_at: string
+}
 
 export function AdminPaymentsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
   const {
-  data: payments = [],
-  isLoading,
-  error
-} = useQuery<Payment[]>({
+    data: payments = [],
+    isLoading,
+    error,
+  } = useQuery<UnifiedPayment[]>({
     queryKey: ['admin-payments'],
     queryFn: async () => {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*, investor:investors(full_name, email)')
-    .order('created_at', { ascending: false })
+      const [{ data: withdrawals, error: wErr }, { data: transactions, error: tErr }] = await Promise.all([
+        supabase.from('withdrawals').select('*').order('created_at', { ascending: false }),
+        supabase.from('transactions').select('*').order('created_at', { ascending: false }),
+      ])
 
-  if (error) throw error
-  
+      if (wErr) throw wErr
+      if (tErr) throw tErr
 
-  return data || []
-},
+      const userIds = Array.from(new Set([
+        ...(withdrawals || []).map(w => w.user_id),
+        ...(transactions || []).map(t => t.user_id),
+      ].filter(Boolean)))
+
+      const { data: users } = userIds.length
+        ? await supabase.from('users').select('id, full_name, email').in('id', userIds)
+        : { data: [] as { id: string; full_name: string; email: string }[] }
+
+      const userMap = new Map((users || []).map(u => [u.id, u]))
+
+      const withdrawalRows: UnifiedPayment[] = (withdrawals || []).map(w => ({
+        id: w.id,
+        _source: 'withdrawal',
+        user: userMap.get(w.user_id) || null,
+        payment_type: 'payout',
+        amount: Number(w.amount),
+        status: w.status === 'approved' ? 'paid' : w.status, // 'pending' | 'paid' | 'rejected'
+        account: w.upi_id,
+        razorpay_payment_id: null,
+        notes: w.note,
+        created_at: w.created_at,
+      }))
+
+      const transactionRows: UnifiedPayment[] = (transactions || []).map(t => ({
+        id: t.id,
+        _source: 'transaction',
+        user: userMap.get(t.user_id) || null,
+        payment_type: t.type || 'investment',
+        amount: Number(t.amount),
+        status: t.status || 'pending',
+        account: null,
+        razorpay_payment_id: null,
+        notes: null,
+        created_at: t.created_at,
+      }))
+
+      return [...withdrawalRows, ...transactionRows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    },
   })
-  
 
   const updatePaymentStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: 'paid' | 'failed' | 'cancelled' }) => {
-  const { error } = await supabase
-    .from('payments')
-    .update({
-      status,
-      processed_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-
-  if (error) throw error
-},
+    mutationFn: async ({ row, status }: { row: UnifiedPayment; status: 'paid' | 'failed' | 'cancelled' }) => {
+      if (row._source === 'withdrawal') {
+        // withdrawal_status_enum only has: pending | approved | rejected
+        const dbStatus = status === 'paid' ? 'approved' : 'rejected'
+        const { error } = await supabase
+          .from('withdrawals')
+          .update({ status: dbStatus })
+          .eq('id', row.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ status })
+          .eq('id', row.id)
+        if (error) throw error
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-payments'] })
       queryClient.invalidateQueries({ queryKey: ['admin-kpis'] }) // Invalidate KPIs for revenue update
+      queryClient.invalidateQueries({
+        queryKey: ['dashboard'],
+      })
+
+      queryClient.invalidateQueries({
+        queryKey: ['payouts'],
+      })
       toast('Payment status updated.', 'success')
     },
     onError: (err: any) => {
@@ -59,7 +125,7 @@ export function AdminPaymentsPage() {
     <>
       <Topbar title="Payments" />
       <div className="page-view content">
-        Error loading payments.
+        Error loading transactions.
       </div>
     </>
   )
@@ -79,7 +145,7 @@ export function AdminPaymentsPage() {
         <div className="rpt-card">
           <div className="rpt-card-header">
             <div>
-              <div className="rpt-card-title">All Transactions</div>
+              <div className="rpt-card-title">Transactions & Payouts</div>
               <div className="rpt-card-sub">Review and manage all financial transactions</div>
             </div>
           </div>
@@ -87,7 +153,7 @@ export function AdminPaymentsPage() {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Investor</th>
+                  <th>Branch Owner</th>
                   <th>Type</th>
                   <th>Amount</th>
                   <th>Status</th>
@@ -98,15 +164,15 @@ export function AdminPaymentsPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>Loading payments...</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>Loading transactions...</td></tr>
                 ) : payments.length === 0 ? (
                   <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>No transactions found.</td></tr>
                 ) : (
                   payments.map((p) => (
-                    <tr key={p.id}>
+                    <tr key={`${p._source}-${p.id}`}>
                       <td>
-                        <div style={{ fontWeight: 500 }}>{p.investor?.full_name || 'N/A'}</div>
-                        <div style={{ fontSize: 11, color: 'var(--gray)' }}>{p.investor?.email || 'N/A'}</div>
+                        <div style={{ fontWeight: 500 }}>{p.user?.full_name || 'N/A'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--gray)' }}>{p.user?.email || 'N/A'}</div>
                       </td>
                       <td>{p.payment_type}</td>
                       <td>{fmt(p.amount)}</td>
@@ -120,17 +186,17 @@ export function AdminPaymentsPage() {
                         </span>
                       </td>
                       <td>
-                        {p.payment_type === 'payout' && `Account: ${p.bank_account ? maskBankAccount(p.bank_account) : 'N/A'}`}
+                        {p.payment_type === 'payout' && `UPI: ${p.account ? maskBankAccount(p.account) : 'N/A'}`}
                         {p.payment_type === 'investment' && `Razorpay ID: ${p.razorpay_payment_id?.slice(0, 8) || 'N/A'}`}
                         {p.notes && ` (${p.notes})`}
                       </td>
                       <td>{new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       <td style={{ display: 'flex', gap: 4 }}>
                         {p.status === 'pending' && p.payment_type === 'payout' && (
-                          <button className="admin-btn admin-btn-primary" onClick={() => updatePaymentStatusMutation.mutate({ id: p.id, status: 'paid' })}>Approve</button>
+                          <button className="admin-btn admin-btn-primary" onClick={() => updatePaymentStatusMutation.mutate({ row: p, status: 'paid' })}>Approve</button>
                         )}
                         {p.status === 'pending' && p.payment_type !== 'payout' && ( // Allow cancelling non-payout pending
-                          <button className="admin-btn admin-btn-danger" onClick={() => updatePaymentStatusMutation.mutate({ id: p.id, status: 'cancelled' })}>Cancel</button>
+                          <button className="admin-btn admin-btn-danger" onClick={() => updatePaymentStatusMutation.mutate({ row: p, status: 'cancelled' })}>Cancel</button>
                         )}
                       </td>
                     </tr>

@@ -14,16 +14,16 @@ export function BranchPrintersPage() {
     queryFn: async () => {
 
       // Query database
-      const { data: kiosks, error } = await supabase
-        .from('kiosks')
-        .select('*, college:colleges(name)')
-        .eq('branch_ambassador_id', investor!.id)
+      const { data: branches, error } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('manager_id', investor!.id)
 
       if (error) throw error
 
-      return kiosks?.map((k: any, index: number) => {
+      return branches?.map((b: any, index: number) => {
         return {
-          ...k,
+          ...b,
           displayCode: `SP-00${index + 1}`
         }
       }) || []
@@ -36,8 +36,8 @@ export function BranchPrintersPage() {
       <div className="page-view content">
         <div className="section-header">
           <div>
-            <h2 className="section-heading">Your Assigned Kiosks</h2>
-            <p className="section-heading-sub">Monitor health status and quickly log operational costs for your printers</p>
+            <h2 className="section-heading">Your Assigned Branches</h2>
+            <p className="section-heading-sub">Monitor your assigned branches and quickly log operational expenses.</p>
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export function BranchPrintersPage() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '18px', fontWeight: 600, color: 'var(--ink)' }}>No printers assigned</h3>
+            <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '18px', fontWeight: 600, color: 'var(--ink)' }}>No branches assigned</h3>
             <p style={{ color: 'var(--gray)', fontSize: '14px', marginTop: '4px' }}>You have not been assigned any smart printers yet. Contact the system administrator.</p>
           </div>
         ) : (
@@ -77,8 +77,8 @@ export function BranchPrintersPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
                     <span style={{
-                      background: k.is_online ? 'var(--green-l)' : 'var(--red-l)',
-                      color: k.is_online ? 'var(--green-d)' : 'var(--red)',
+                      background: k.is_active ? 'var(--green-l)' : 'var(--red-l)',
+                      color: k.is_active ? 'var(--green-d)' : 'var(--red)',
                       fontSize: '11px',
                       fontWeight: 700,
                       padding: '4px 8px',
@@ -86,7 +86,7 @@ export function BranchPrintersPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      {k.is_online ? 'Online' : 'Offline'}
+                      {k.is_active ? 'Active' : 'Inactive'}
                     </span>
                     <span style={{ fontSize: '11px', color: 'var(--gray)', fontWeight: 600 }}>{k.displayCode}</span>
                   </div>
@@ -109,14 +109,14 @@ export function BranchPrintersPage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--gray)' }}>Current Status:</span>
-                    <span className={`status-badge ${k.status === 'active' ? 'approved' : k.status === 'offline' ? 'rejected' : 'pending'}`} style={{
+                    <span className={`status-badge ${k.is_active ? 'rejected' : 'pending'}`} style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       fontSize: '11px',
                       fontWeight: 600,
                       textTransform: 'capitalize'
                     }}>
-                      {k.status}
+                      {k.is_active? 'Active ' : 'Inactive'}
                     </span>
                   </div>
                 </div>
@@ -124,7 +124,7 @@ export function BranchPrintersPage() {
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--gray)', textTransform: 'uppercase', fontWeight: 600 }}>Campus</span>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{k.college?.name || 'Main Campus'}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{k.location}</div>
                   </div>
                   <button 
                     onClick={() => navigate(`/branch/log-expense?code=${k.displayCode}`)}

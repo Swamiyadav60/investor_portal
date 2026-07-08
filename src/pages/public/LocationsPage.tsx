@@ -6,36 +6,36 @@ import { AuthModal } from '@/components/auth/AuthModal'
 import { InvestorWaitlistModal } from '@/components/investor/InvestorWaitlistModal'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import type { College } from '@/types/database'
+import type { Branch } from '@/types/database'
 
 export function LocationsPage() {
-  const { investor } = useAuth()
-  const [colleges, setColleges] = useState<College[]>([])
-  const [reservedCollegeIds, setReservedCollegeIds] = useState<Set<string>>(new Set())
+  const { user } = useAuth()
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [reservedBranchIds, setReservedBranchIds] = useState<Set<string>>(new Set())
   const [slotFilter, setSlotFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showReserveModal, setShowReserveModal] = useState(false)
-  const [selectedCollege, setSelectedCollege] = useState<College | null>(null)
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
 
   useEffect(() => {
-    // Fetch colleges
-    async function fetchColleges() {
-      const { data, error } = await supabase.from('colleges').select('*')
-      if (error) { console.error('Error fetching colleges:', error); return }
-      setColleges(data as College[])
+    // Fetch branches
+    async function fetchBranches() {
+      const { data, error } = await supabase.from('branches').select('*')
+      if (error) { console.error('Error fetching branches:', error); return }
+      setBranches(data as Branch[])
     }
-    fetchColleges()
+    fetchBranches()
 
     // Real-time: slot count updates instantly for ALL users
     const channel = supabase
-      .channel('colleges-slots')
+      .channel('branches-slots')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'colleges' },
+        { event: 'UPDATE', schema: 'public', table: 'branches' },
         (payload) => {
-          setColleges(prev =>
-            prev.map(c => c.id === payload.new.id ? { ...c, ...payload.new } as College : c)
+          setBranches(prev =>
+            prev.map(b => b.id === payload.new.id ? { ...b, ...payload.new } as Branch : b    )
           )
         }
       )
@@ -46,23 +46,30 @@ export function LocationsPage() {
 
   // Fetch which colleges THIS investor has already reserved
   useEffect(() => {
-    if (!investor) {
-      setReservedCollegeIds(new Set())
+    if (!user) {
+      setReservedBranchIds(new Set())
       return
     }
     async function fetchMyWaitlists() {
-      const { data, error } = await supabase
-        .from('waitlists')
-        .select('college_id')
-        .eq('investor_id', investor!.id)
-        .neq('status', 'rejected')
-      if (error) { console.error('Error fetching waitlists:', error); return }
-      setReservedCollegeIds(new Set(data.map((w: any) => w.college_id)))
-    }
-    fetchMyWaitlists()
-  }, [investor])
+  const { data, error } = await supabase
+    .from("branch_waitlist")
+    .select("branch_id")
+    .eq("user_id", user!.id)
+    .neq("status", "rejected")
 
-  const filtered = colleges.filter((s) => {
+  if (error) {
+    console.error("Error fetching waitlists:", error)
+    return
+  }
+
+  setReservedBranchIds(
+    new Set((data ?? []).map((w: any) => w.branch_id))
+  )
+}
+    fetchMyWaitlists()
+  }, [user])
+
+  const filtered = branches.filter((s) => {
     const matchesType = slotFilter === 'all' || s.type === slotFilter
     const matchesSearch =
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,13 +77,13 @@ export function LocationsPage() {
     return matchesType && matchesSearch
   })
 
-  const handleReserveClick = (college: College) => {
-    const isFull = college.slots_total - college.slots_taken <= 0
-    const alreadyReserved = reservedCollegeIds.has(college.id)
+  const handleReserveClick = (branch: Branch) => {
+    const isFull = branch.slots_total - branch.slots_taken <= 0
+    const alreadyReserved = reservedBranchIds.has(branch .id)
     if (isFull || alreadyReserved) return
 
-    setSelectedCollege(college)
-    if (!investor) {
+    setSelectedBranch(branch)
+    if (!user) {
       setShowAuthModal(true)
     } else {
       setShowReserveModal(true)
@@ -89,13 +96,13 @@ export function LocationsPage() {
   }
 
   // Called after successful reservation — update local state immediately
-  const handleReserveSuccess = (collegeId: string) => {
-    setColleges(prev =>
-      prev.map(c =>
-        c.id === collegeId ? { ...c, slots_taken: c.slots_taken + 1 } : c
+  const handleReserveSuccess = (branchId: string) => {
+    setBranches(prev =>
+      prev.map(b =>
+        b.id === branchId ? { ...b, slots_taken: b.slots_taken + 1 } : b
       )
     )
-    setReservedCollegeIds(prev => new Set([...prev, collegeId]))
+    setReservedBranchIds(prev => new Set([...prev, branchId]))
   }
 
   const renderContent = () => (
@@ -135,7 +142,7 @@ export function LocationsPage() {
           const left = s.slots_total - s.slots_taken
           const pct = Math.round((s.slots_taken / s.slots_total) * 100)
           const isFull = left <= 0
-          const alreadyReserved = reservedCollegeIds.has(s.id)
+          const alreadyReserved = reservedBranchIds.has(s.id)
           const isBlocked = isFull || alreadyReserved
 
           return (
@@ -270,9 +277,9 @@ export function LocationsPage() {
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
       />
-      {selectedCollege && (
+      {selectedBranch && (
         <InvestorWaitlistModal
-          college={selectedCollege}
+          branch={selectedBranch}
           isOpen={showReserveModal}
           onClose={() => setShowReserveModal(false)}
           onSuccess={handleReserveSuccess}

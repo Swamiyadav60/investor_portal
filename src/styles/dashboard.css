@@ -62,10 +62,16 @@ body {
   padding: 1.25rem 1.25rem 1rem;
   border-bottom: 1px solid var(--sidebar-border);
   display: flex;
+  padding-left: 40px; /* space for hamburger icon */
+  min-height: 70px;
   align-items: center;
   gap: 9px
 }
-
+.sidebar-logo-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sidebar-logo-dot {
   width: 9px;
   height: 9px;
@@ -101,7 +107,13 @@ body {
   flex: 1;
   padding: 0.5rem 0.75rem
 }
+.sidebar-logo {
+  text-decoration: none;
+}
 
+.sidebar-logo-text {
+  white-space: nowrap;
+}
 .nav-item {
   display: flex;
   align-items: center;
@@ -680,7 +692,7 @@ body {
     transition: left 0.3s ease;
     overflow-y: auto;
   }
-
+  
   .sidebar.open {
     left: 0;
   }

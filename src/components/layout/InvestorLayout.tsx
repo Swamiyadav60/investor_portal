@@ -19,13 +19,17 @@ export function InvestorLayout() {
   }
 
   // Enforce onboarding modal if profile is incomplete
-  if (investor && investor.role === 'investor' && !investor.profile_completed) {
-    return (
-      <OnboardingModal 
-        prefillName={investor.full_name || undefined}
-      />
-    )
-  }
+  if (
+    investor &&
+    investor.role === 'branch_owner' &&
+    !investor.profile_completed
+  ) {
+  return (
+    <OnboardingModal
+      prefillName={investor.full_name || undefined}
+    />
+  )
+}
 
   return (
     <div className="app-shell">

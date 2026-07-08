@@ -50,7 +50,7 @@ if (user && !investor) {
     return <Navigate to="/dashboard" replace />
   }
 
-  if (allowedRoles && investor && !allowedRoles.includes(investor.role)) {
+  if ( allowedRoles && investor && investor.role && !allowedRoles.includes(investor.role)) {
     if (isAmbassador) return <Navigate to="/branch/dashboard" replace />
     if (isInvestor) return <Navigate to="/dashboard" replace />
     return <Navigate to="/" replace />

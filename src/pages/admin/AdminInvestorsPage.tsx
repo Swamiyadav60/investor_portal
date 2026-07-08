@@ -3,20 +3,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
-import type { Investor } from '@/types/database'
+import type { User } from '@/types/database'
 import { maskPan, maskAadhaar, maskBankAccount } from '@/lib/format'
 
 export function AdminInvestorsPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState<'investor' | 'branch_ambassador'>('investor')
+  const [activeTab, setActiveTab] =useState<'branch_owner' | 'branch'>('branch_owner')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null)
+  const [selectedInvestor, setSelectedInvestor] = useState<User | null>(null)
   const [newAmbassador, setNewAmbassador] = useState({
     fullName: '',
     email: '',
     password: 'Password123!',
+  
   })
+ 
 
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -26,18 +28,25 @@ export function AdminInvestorsPage() {
     queryFn: async () => {
       // Query decrypted view to retrieve PAN and Aadhaar in decrypted form
       const { data, error } = await supabase
-        .from('decrypted_investors')
-        .select('*')
-        .order('created_at', { ascending: false })
+  .from('users')
+  .select(`
+    *,
+    user_role:user_roles(*),
+    user_kyc:decrypted_user_kyc(*)
+  `)
+  .order('created_at', { ascending: false })
       
       if (error) throw error
-      return data as Investor[]
+      return (data ?? []) as User[]
     },
   })
 
   const updateKycMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'verified' | 'rejected' | 'pending' }) => {
-      const { error } = await supabase.from('investors').update({ kyc_status: status }).eq('id', id)
+      const { error } = await supabase
+        .from("user_kyc")
+        .update({ kyc_status: status })
+        .eq("user_id", id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -52,11 +61,11 @@ export function AdminInvestorsPage() {
   const createAmbassadorMutation = useMutation({
     mutationFn: async () => {
       // Call supabase RPC
-      const { data, error } = await supabase.rpc('create_ambassador_account', {
-        p_email: newAmbassador.email,
-        p_password: newAmbassador.password,
-        p_full_name: newAmbassador.fullName
-      })
+     const { data, error } = await supabase.rpc('create_branch_account', {
+  p_email: newAmbassador.email,
+  p_password: newAmbassador.password,
+  p_full_name: newAmbassador.fullName
+})
 
       if (error) throw error
       return data
@@ -72,12 +81,18 @@ export function AdminInvestorsPage() {
     }
   })
 
-  const filteredInvestors = investors.filter(inv => {
-    const matchesSearch = inv.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inv.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = inv.role === activeTab
-    return matchesSearch && matchesRole
-  })
+  const filteredInvestors = investors.filter((i) => {
+  const search = searchTerm.toLowerCase()
+
+  const matchesSearch =
+    (i.full_name ?? "").toLowerCase().includes(search) ||
+    (i.email ?? "").toLowerCase().includes(search) ||
+    (i.phone ?? "").toLowerCase().includes(search)
+
+  const matchesRole = i.role === activeTab
+
+  return matchesSearch && matchesRole
+})
 
   return (
     <>
@@ -87,7 +102,7 @@ export function AdminInvestorsPage() {
           <div>
             <div className="section-heading">Manage Accounts</div>
             <div className="section-heading-sub">
-              {investors.filter(i => i.role === 'investor').length} Investors · {investors.filter(i => i.role === 'branch_ambassador').length} Branch Ambassadors
+              {investors.filter(i => i.role === 'branch_owner').length} Investors · {investors.filter(i => i.role === 'branch').length} Branch Ambassadors
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -99,7 +114,7 @@ export function AdminInvestorsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {activeTab === 'branch_ambassador' && (
+            {activeTab === 'branch' && (
               <button 
                 onClick={() => setShowCreateModal(true)}
                 className="admin-btn admin-btn-primary"
@@ -114,28 +129,28 @@ export function AdminInvestorsPage() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px' }}>
           <button
-            onClick={() => setActiveTab('investor')}
+            onClick={() => setActiveTab('branch_owner')}
             style={{
               padding: '10px 20px',
               background: 'transparent',
               border: 'none',
-              borderBottom: activeTab === 'investor' ? '2px solid var(--green)' : '2px solid transparent',
-              color: activeTab === 'investor' ? 'var(--green-d)' : 'var(--gray)',
+              borderBottom: activeTab === 'branch_owner' ? '2px solid var(--green)' : '2px solid transparent',
+              color: activeTab === 'branch_owner' ? 'var(--green-d)' : 'var(--gray)',
               fontWeight: 600,
               cursor: 'pointer',
               fontSize: '14px'
             }}
           >
-            Investors
+            Branch Owners
           </button>
           <button
-            onClick={() => setActiveTab('branch_ambassador')}
+            onClick={() => setActiveTab('branch')}
             style={{
               padding: '10px 20px',
               background: 'transparent',
               border: 'none',
-              borderBottom: activeTab === 'branch_ambassador' ? '2px solid var(--green)' : '2px solid transparent',
-              color: activeTab === 'branch_ambassador' ? 'var(--green-d)' : 'var(--gray)',
+              borderBottom: activeTab === 'branch' ? '2px solid var(--green)' : '2px solid transparent',
+              color: activeTab === 'branch' ? 'var(--green-d)' : 'var(--gray)',
               fontWeight: 600,
               cursor: 'pointer',
               fontSize: '14px'
@@ -152,7 +167,7 @@ export function AdminInvestorsPage() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  {activeTab === 'investor' ? (
+                  {activeTab === 'branch_owner' ? (
                     <>
                       <th>City</th>
                       <th>KYC</th>
@@ -178,7 +193,7 @@ export function AdminInvestorsPage() {
                       <td style={{ fontWeight: 500 }}>{inv.full_name}</td>
                       <td>{inv.email}</td>
                       <td>{inv.city || 'Hyderabad'}</td>
-                      {activeTab === 'investor' ? (
+                      {activeTab === 'branch_owner' ? (
                         <>
                           <td>
                             <span className={`admin-badge ${inv.kyc_status === 'verified' ? 'admin-badge-active' : inv.kyc_status === 'rejected' ? 'admin-badge-failed' : 'admin-badge-pending'}`}>

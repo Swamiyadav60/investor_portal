@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import type { College } from '@/types/database'
+import type { Branch } from '@/types/database'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { supabase } from '@/lib/supabase'
@@ -9,10 +9,10 @@ import { useToast } from '@/components/ui/Toast'
 
 // 1. Update the interface
 interface InvestorWaitlistModalProps {
-  college: College
+  branch: Branch
   isOpen: boolean
   onClose: () => void
-  onSuccess?: (collegeId: string) => void  // ← add this line
+  onSuccess?: (branchId: string) => void  // ← add this line
 }
 
 
@@ -29,7 +29,7 @@ const FEATURES = [
 ]
 
 // 2. Update the function signature
-export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: InvestorWaitlistModalProps) {
+export function InvestorWaitlistModal({ branch, isOpen, onClose, onSuccess }: InvestorWaitlistModalProps) {
 
 
   const { investor } = useAuth()
@@ -41,24 +41,53 @@ export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: I
     mutationFn: async ({ type, paymentId }: { type: 'free' | 'priority'; paymentId: string | null }) => {
       if (!investor) throw new Error('Not authenticated')
 
-      const payload = {
-        p_investor_id: investor.id,
-        p_college_id: college.id,
-        p_waitlist_type: type,
-        p_payment_id: paymentId,
-        p_notes: type === 'priority' ? 'Priority Waitlist (Paid ₹499 via Razorpay)' : 'Free Waitlist'
-      }
+      const { data: existing } = await supabase
+  .from("branch_waitlist")
+  .select("id")
+  .eq("branch_id", branch.id)
+  .eq("user_id", investor.id)
+  .maybeSingle()
 
-      
+if (existing) {
+  throw new Error("You already joined this waitlist.")
+}
 
-      const { data: pos, error } = await supabase.rpc('join_waitlist', payload)
-      if (error) throw error
-      return { position: pos as number, type }
+const { count } = await supabase
+  .from("branch_waitlist")
+  .select("*", {
+    count: "exact",
+    head: true
+  })
+  .eq("branch_id", branch.id)
+
+const position = (count ?? 0) + 1
+
+const { error } = await supabase
+  .from("branch_waitlist")
+  .insert({
+    user_id: investor.id,
+    branch_id: branch.id,
+    status: "pending",
+    waitlist_type: type,
+    queue_position: position,
+    razorpay_payment_id: paymentId,
+    notes:
+      type === "priority"
+        ? "Priority Waitlist"
+        : "Free Waitlist"
+  })
+
+if (error) throw error
+
+return {
+  position,
+  type
+}
     },
     //3. In reservationMutation, update onSuccess:
     onSuccess: (data) => {
       setSuccessData(data)
-      onSuccess?.(college.id)   // ← add this line
+      onSuccess?.(branch.id)   // ← add this line
     },
     onError: (err: any) => {
       toast(err.message, 'error')
@@ -80,7 +109,7 @@ export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: I
       try {
         await initiatePayment({
           amount: 499,
-          description: `Priority Waitlist: ${college.name}`,
+          description: `Priority Waitlist: ${branch.name}`,
           name: investor.full_name || '',
           email: investor.email || '',
           onSuccess: (res) => reservationMutation.mutate({ type, paymentId: res.razorpay_payment_id }),
@@ -119,8 +148,8 @@ export function InvestorWaitlistModal({ college, isOpen, onClose, onSuccess }: I
           </h2>
           <p className="wl-success-sub">
             {isPriority
-              ? `You've secured a priority position for ${college.name}. Our team will reach out within 48 hours.`
-              : `You're now in queue for ${college.name}. We'll notify you when a slot opens up.`}
+              ? `You've secured a priority position for ${branch.name}. Our team will reach out within 48 hours.`
+              : `You're now in queue for ${branch.name}. We'll notify you when a slot opens up.`}
           </p>
 
           <div className={`wl-position-card ${isPriority ? 'wl-position-card--gold' : ''}`}>

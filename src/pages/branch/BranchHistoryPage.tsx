@@ -16,7 +16,14 @@ export function BranchHistoryPage() {
       
       const { data, error } = await supabase
         .from('expenses')
-        .select('*, kiosk:kiosks(name)')
+        .select(`
+          *,
+          branch:branches(
+          id,
+          name,
+          location
+        )
+    ` )
         .eq('submitted_by', investor!.id)
         .order('created_at', { ascending: false })
 
@@ -36,8 +43,8 @@ export function BranchHistoryPage() {
       <div className="page-view content">
         <div className="section-header">
           <div>
-            <h2 className="section-heading">Logged Operational Costs</h2>
-            <p className="section-heading-sub">View, track, and audit historical submissions logged by you</p>
+            <h2 className="section-heading">Branch Expense History</h2>
+            <p className="section-heading-sub">View and track all expenses submitted for your assigned branches.</p>
           </div>
         </div>
 
@@ -74,7 +81,7 @@ export function BranchHistoryPage() {
               <thead>
                 <tr>
                   <th>Submission Date</th>
-                  <th>Kiosk / Printer</th>
+                  <th>Branch</th>
                   <th>Category</th>
                   <th>Type</th>
                   <th>Amount</th>
@@ -106,7 +113,7 @@ export function BranchHistoryPage() {
                           year: 'numeric'
                         })}
                       </td>
-                      <td>{exp.kiosk?.name || 'Smart Printer'}</td>
+                      <td>{exp.branch?.name || 'Smart Branch'}</td>
                       <td>
                         <span style={{
                           background: 'var(--gray-l)',

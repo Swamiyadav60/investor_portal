@@ -16,77 +16,109 @@ export function KiosksPage() {
   const navigate = useNavigate()
   const { investor } = useAuth()
   const queryClient = useQueryClient()
+
+  // Branches this investor owns, enriched with this-month / lifetime stats
+  // computed from branch_daily_revenue (branches itself has no earnings columns).
   const { data: activeKiosks = [] } = useQuery({
-  queryKey: ['my-kiosks', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data: assignments, error } = await supabase
-      .from('investor_kiosks')
-      .select('kiosk_id')
-      .eq('investor_id', investor!.id)
-      .eq('status', 'active')
+    queryKey: ['my-kiosks', investor?.id],
+    enabled: !!investor?.id,
+    queryFn: async () => {
+      const { data: branches, error } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('owner_id', investor!.id)
 
-    if (error) throw error
+      if (error) throw error
+      if (!branches?.length) return []
 
-    const kioskIds =
-      assignments?.map(a => a.kiosk_id) || []
+      const branchIds = branches.map(b => b.id)
 
-    if (!kioskIds.length) return []
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = now.getMonth() + 1
+      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
+      const lastDay = new Date(year, month, 0).getDate()
+      const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-    const { data: kiosks, error: kioskError } = await supabase
-      .from('kiosks')
-      .select('*')
-      .in('id', kioskIds)
+      const [{ data: monthRevenue }, { data: allRevenue }] = await Promise.all([
+        supabase
+          .from('branch_daily_revenue')
+          .select('branch_id, upi_revenue, wallet_amount, upi_jobs, wallet_jobs')
+          .in('branch_id', branchIds)
+          .gte('revenue_date', monthStart)
+          .lte('revenue_date', monthEnd),
+        supabase
+          .from('branch_daily_revenue')
+          .select('branch_id, upi_revenue, wallet_amount')
+          .in('branch_id', branchIds),
+      ])
 
-    if (kioskError) throw kioskError
+      const PROFIT_SHARE = Number(investor?.profit_share ?? 70) / 100
 
-    return kiosks || []
-  }
-})
+      return branches.map(b => {
+        const thisMonth = (monthRevenue || []).filter(r => r.branch_id === b.id)
+        const lifetime = (allRevenue || []).filter(r => r.branch_id === b.id)
+
+        const monthRevenueTotal = thisMonth.reduce((s, r) => s + Number(r.upi_revenue || 0) + Number(r.wallet_amount || 0), 0)
+        const jobsThisMonth = thisMonth.reduce((s, r) => s + Number(r.upi_jobs || 0) + Number(r.wallet_jobs || 0), 0)
+        const lifetimeRevenueTotal = lifetime.reduce((s, r) => s + Number(r.upi_revenue || 0) + Number(r.wallet_amount || 0), 0)
+        const occupancy = jobsThisMonth > 0 ? Math.min(Math.round((jobsThisMonth / 1000) * 100), 100) : 0
+
+        return {
+          ...b,
+          monthly_earnings: monthRevenueTotal * PROFIT_SHARE,
+          total_earned: lifetimeRevenueTotal * PROFIT_SHARE,
+          jobs_this_month: jobsThisMonth,
+          occupancy_rate: occupancy,
+          installed_at: b.created_at,
+        }
+      })
+    }
+  })
   const { toast } = useToast()
 
-  
+  // "Available to invest" listing — branches without an owner yet
+  const { data: colleges = [] } = useQuery({
+    queryKey: ['branches-available'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('is_active', true)
+        .is('owner_id', null)
 
-const { data: colleges = [] } = useQuery({
-  queryKey: ['colleges'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('colleges')
-      .select('*')
-      
+      if (error) throw error
 
-    if (error) throw error
-    
-    return data || []
-  }
-})
+      return data || []
+    }
+  })
 
-const { data: myWaitlists = [] } = useQuery({
-  queryKey: ['waitlists', investor?.id],
-  enabled: !!investor?.id,
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('waitlists')
-      .select('college_id')
-      .eq('investor_id', investor!.id)
-      .neq('status', 'rejected')
-    
-    if (error) throw error
-    return data || []
-  }
-})
+  const { data: myWaitlists = [] } = useQuery({
+    queryKey: ['branch-waitlist', investor?.id],
+    enabled: !!investor?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('branch_waitlist')
+        .select('branch_id')
+        .eq('user_id', investor!.id)
+        .neq('status', 'rejected')
 
+      if (error) throw error
+      return data || []
+    }
+  })
 
- const filtered =
-  (slotFilter === 'all'
-    ? colleges
-    : colleges.filter(c => c.type === slotFilter)
-  )
-  .filter(c => c.slots_taken < c.slots_total)
+  const filtered =
+    (slotFilter === 'all'
+      ? colleges
+      : colleges.filter((c: any) => c.type === slotFilter)
+    )
+      .filter((c: any) => Number(c.slots_taken) < Number(c.slots_total))
+
   const handleInvest = (college: any) => {
-    const alreadyReserved = myWaitlists.some((w: any) => w.college_id === college.id)
+    const alreadyReserved = myWaitlists.some((w: any) => w.branch_id === college.id)
     if (alreadyReserved) {
-      toast('You are already on the waitlist for this college', 'info')
+      toast('You are already on the waitlist for this location', 'info')
       return
     }
     setSelectedCollege(college)
@@ -96,10 +128,15 @@ const { data: myWaitlists = [] } = useQuery({
   const handleReserveSuccess = () => {
     setShowWaitlistModal(false)
     toast("You've been added to the waitlist!", 'success')
-    queryClient.invalidateQueries({ queryKey: ['waitlists'] })
+    queryClient.invalidateQueries({
+      queryKey: ['branch-waitlist', investor?.id],
+    })
+    queryClient.invalidateQueries({
+      queryKey: ['branches-available'],
+    })
     navigate('/waitlist')
   }
-  
+
 
   return (
     <>
@@ -135,7 +172,7 @@ const { data: myWaitlists = [] } = useQuery({
               <div className="pc-stats">
                 <div className="pc-stat">
                   <div className="pc-stat-val" style={{ color: 'var(--green)' }}>
-                    {fmt(monthlyShare)}          {/* ← was investorProfit */}
+                    {fmt(monthlyShare)}
                   </div>
                   <div className="pc-stat-lbl">Your share / mo</div>
                 </div>
@@ -144,7 +181,7 @@ const { data: myWaitlists = [] } = useQuery({
                   <div className="pc-stat-lbl">Jobs this month</div>
                 </div>
                 <div className="pc-stat">
-                  <div className="pc-stat-val">{fmt(totalEarned)}</div>   {/* ← was investorProfit */}
+                  <div className="pc-stat-val">{fmt(totalEarned)}</div>
                   <div className="pc-stat-lbl">Total earned</div>
                 </div>
                 <div className="pc-stat">
@@ -188,9 +225,9 @@ const { data: myWaitlists = [] } = useQuery({
         </div>
 
         <div className="available-grid">
-          {filtered.map((s) => {
-            const pct = Math.round(s.slots_taken / s.slots_total * 100)
-            const left = s.slots_total - s.slots_taken
+          {filtered.map((s: any) => {
+            const pct = s.slots_total > 0 ? Math.round((Number(s.slots_taken) / Number(s.slots_total)) * 100) : 0
+            const left = Number(s.slots_total || 0) - Number(s.slots_taken || 0)
             return (
               <div key={s.id} className="av-card">
                 <div className="av-top">
@@ -230,7 +267,7 @@ const { data: myWaitlists = [] } = useQuery({
 
       {selectedCollege && (
         <InvestorWaitlistModal
-          college={selectedCollege}
+          branch={selectedCollege}
           isOpen={showWaitlistModal}
           onClose={() => setShowWaitlistModal(false)}
           onSuccess={handleReserveSuccess}

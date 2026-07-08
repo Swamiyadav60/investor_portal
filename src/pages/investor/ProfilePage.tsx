@@ -40,28 +40,44 @@ export function ProfilePage() {
   }
 
   const handleSave = async () => {
-    if (isSupabaseConfigured && investor) {
-      const payload = {
+    if (!investor) return
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({
         phone: form.phone,
-        city: form.city,
-        gst: form.gst,
         upi_id: form.upi_id,
-      }
+      })
+      .eq('id', investor.id)
 
-      const { error } = await supabase
-        .from('investors')
-        .update(payload)
-        .eq('id', investor.id)
-
-      if (error) {
-        toast('Error saving profile: ' + error.message, 'error')
-        return
-      }
-
-      await refreshInvestor()
-      setEditing(false)
-      toast('Profile updated successfully.', 'success')
+    if (userError) {
+      toast(userError.message, 'error')
+      return
     }
+
+    const { error: kycError } = await supabase
+      .from('user_kyc')
+      .upsert(
+        {
+          user_id: investor.id,
+          city: form.city,
+          
+        },
+        {
+          onConflict: 'user_id',
+        }
+      )
+
+    if (kycError) {
+      toast(kycError.message, 'error')
+      return
+    }
+
+    await refreshInvestor()
+
+    setEditing(false)
+
+    toast('Profile updated successfully.', 'success')
   }
 
   return (
@@ -106,7 +122,7 @@ export function ProfilePage() {
               <div className="prof-avatar">{investor?.avatar_initials || 'VP'}</div>
               <div>
                 <div className="prof-name">{investor?.full_name}</div>
-                <div className="prof-since">Investor since {formatDate(investor?.created_at)}</div>
+                <div className="prof-since">Member since {formatDate(investor?.created_at)}</div>
               </div>
             </div>
 
@@ -266,7 +282,7 @@ export function ProfilePage() {
               Request slot transfer
             </button>
             <button className="danger-btn" onClick={() => setShowCloseAccountModal(true)}>
-              Close investor account
+              Close account
             </button>
           </div>
           <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem' }}>
@@ -319,7 +335,7 @@ export function ProfilePage() {
       {showCloseAccountModal && (
         <div className="admin-modal-overlay" onClick={() => setShowCloseAccountModal(false)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-            <div className="rpt-card-title" style={{ marginBottom: '1rem' }}>Close Investor Account</div>
+            <div className="rpt-card-title" style={{ marginBottom: '1rem' }}>Close Account</div>
             <div style={{ color: 'var(--gray)', fontSize: '14px', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               Closing your account is a permanent action and requires manual verification by our team. Please contact us directly to proceed.
             </div>

@@ -31,19 +31,14 @@ const { data } = useQuery({
   queryKey: ['reports', investor?.id],
   enabled: !!investor?.id,
   queryFn: async () => {
-    const { data: kiosks } = await supabase
-  .from('investor_kiosks')
-  .select(`
-    kiosk_id,
-    kiosks (
-      recovered_amount
-    )
-  `)
-  .eq('investor_id', investor!.id)
-  .eq('status', 'active')
+    const { data: branches } = await supabase
+  .from('branches')
+  .select('id')
+  .eq('owner_id', investor!.id)
+  .eq('is_active', true)
 
     const kioskIds =
-      kiosks?.map(k => k.kiosk_id) || []
+      branches?.map(b => b.id) || []
 
     if (!kioskIds.length) {
   return {
@@ -57,20 +52,20 @@ const { data } = useQuery({
       { data: expenses }
     ] = await Promise.all([
       supabase
-        .from('revenues')
+        .from('branch_daily_revenue')
         .select('*')
-        .in('kiosk_id', kioskIds),
+        .in('branch_id', kioskIds),
 
       supabase
-        .from('expenses')
+        .from('branch_expenses')
         .select('*')
-        .in('kiosk_id', kioskIds)
+        .in('branch_id', kioskIds)
         .eq('status', 'approved')
     ])
     const { data: payouts } = await supabase
-  .from('payments')
+  .from('withdrawals')
   .select('amount,status')
-  .eq('investor_id', investor!.id)
+  .eq('user_id', investor!.id)
     
 
     const reportData = (revenues || []).map(r => {
@@ -78,8 +73,8 @@ const { data } = useQuery({
         (expenses || [])
           .filter(
             e =>
-              e.kiosk_id === r.kiosk_id &&
-              e.period_start === r.period_start
+              e.branch_id === r.branch_id &&
+              new Date(e.expense_date).toDateString()===new Date(r.revenue_date).toDateString()
           )
 
       const variable =
@@ -94,12 +89,12 @@ const { data } = useQuery({
 
       return {
         id: r.id,
-        date: formatDate(r.created_at, r.period_start),
-        rawDate: r.created_at || r.period_start,
-        rev: Number(r.amount),
+        date: formatDate(r.created_at, r.revenue_date),
+        rawDate: r.created_at || r.revenue_date,
+        rev: Number(r.upi_revenue ?? 0)+Number(r.wallet_amount ?? 0),
         var_: variable,
         fix_: fixed,
-        jobs: Number((r as any).print_jobs || 0)
+        jobs: Number((r as any).upi_jobs||0)+Number((r as any).wallet_jobs||0)
       }
     })
 

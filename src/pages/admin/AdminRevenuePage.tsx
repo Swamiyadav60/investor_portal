@@ -19,8 +19,8 @@ export function AdminRevenuePage() {
     queryKey: ['admin-analytics-kiosks'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('kiosks')
-        .select('id, name, location, status')
+        .from("branches")
+        .select("id,name,location,is_active,owner_id")
       if (error) throw error
       return data || []
     },
@@ -30,54 +30,30 @@ export function AdminRevenuePage() {
   const { data: revenues = [], isLoading: loadingRevenues } = useQuery({
     queryKey: ['admin-analytics-revenues'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('revenues')
-        .select(`
-          id,
-          amount,
-          print_jobs,
-          period_start,
-          period_end,
-          period_type,
-          notes,
-          created_at,
-          kiosk_id,
-          kiosk:kiosks (
-            id,
-            name,
-            location,
-            status,
-            college:colleges (
-              id,
-              name,
-              location,
-              city
-            ),
-            investor_kiosks (
-              status,
-              investor:investors (
-                id,
-                full_name,
-                email,
-                profit_share
-              )
-            )
-          )
-        `)
-        .order('period_start', { ascending: false })
+      const { data: revenues, error } = await supabase
+        .from("branch_daily_revenue")
+        .select("*")
+        .order("revenue_date", { ascending: false })
+
       if (error) throw error
-      return data || []
+      return revenues || []
+
+      
+      
+      
     },
   })
+  
 
   // ── Fetch Approved Expenses ────────────────────────────────────────────────
   const { data: expenses = [], isLoading: loadingExpenses } = useQuery({
     queryKey: ['admin-analytics-expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('expenses')
-        .select('kiosk_id, amount, period_start')
-        .eq('status', 'approved')
+        .from("branch_expenses")
+        .select("branch_id,amount,period_start,status")
+        .eq("status","approved")
+        
       if (error) throw error
       return data || []
     },
@@ -87,41 +63,46 @@ export function AdminRevenuePage() {
 
   // ── Compute Raw Metrics Per Revenue Row (Pre-filtering) ────────────────────
   const computedAllRows = useMemo(() => {
-    return revenues.map((r: any) => {
-      const activeInvestorKiosk = r.kiosk?.investor_kiosks?.find((ik: any) => ik.status === 'active') || r.kiosk?.investor_kiosks?.[0]
-      const investor = activeInvestorKiosk?.investor
-      const investorName = investor?.full_name || 'Platform (Direct)'
-      const collegeName = r.kiosk?.college?.name || 'Main Campus'
-      const printerCode = r.kiosk?.name || 'Unknown'
-      const revenueVal = Number(r.amount || 0)
+  return revenues.map((r: any) => {
+    const branch = kiosks.find((b: any) => b.id === r.branch_id)
 
-      // Find matching approved expenses for this kiosk and period
-      const matchedExpenses = expenses.filter((e: any) => 
-        e.kiosk_id === r.kiosk_id && e.period_start === r.period_start
-      )
-      const approvedExpensesVal = matchedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0)
-      
-      const netProfitVal = revenueVal - approvedExpensesVal
-      
-      const profitSharePct = investor ? Number(investor.profit_share ?? 70) : 0
-      const investorShareVal = netProfitVal > 0 ? netProfitVal * (profitSharePct / 100) : 0
-      const platformShareVal = netProfitVal - investorShareVal
+    const revenueVal =
+      Number(r.upi_revenue || 0) +
+      Number(r.wallet_amount || 0)
 
-      return {
-        ...r,
-        investorName,
-        collegeName,
-        printerCode,
-        revenueVal,
-        approvedExpensesVal,
-        netProfitVal,
-        investorShareVal,
-        platformShareVal,
-        kioskStatus: r.kiosk?.status || 'offline',
-        lastUpdated: r.created_at || r.period_start
-      }
-    })
-  }, [revenues, expenses])
+    const matchedExpenses = expenses.filter(
+      (e: any) =>
+        e.branch_id === r.branch_id &&
+        e.period_start === r.revenue_date
+    )
+
+    const approvedExpensesVal = matchedExpenses.reduce(
+      (sum: number, e: any) => sum + Number(e.amount),
+      0
+    )
+
+    const netProfitVal = revenueVal - approvedExpensesVal
+
+    return {
+      ...r,
+
+      investorName: "Branch Owner",
+      collegeName: branch?.name ?? "-",
+      printerCode: r.branch_name ?? branch?.name ?? "-",
+
+      revenueVal,
+      approvedExpensesVal,
+      netProfitVal,
+
+      investorShareVal: 0,
+      platformShareVal: netProfitVal,
+
+      kioskStatus: branch?.is_active ? "active" : "inactive",
+
+      lastUpdated: r.created_at,
+    }
+  })
+}, [revenues, expenses, kiosks])
 
   // ── Filter & Sort Logic ────────────────────────────────────────────────────
   const filteredRows = useMemo(() => {
@@ -146,15 +127,19 @@ export function AdminRevenuePage() {
     }
 
     if (dateFrom) {
-      result = result.filter(r => r.period_start >= dateFrom)
+      result = result.filter(r => r.revenue_date >= dateFrom)
     }
 
     if (dateTo) {
-      result = result.filter(r => r.period_start <= dateTo)
+      result = result.filter(r => r.revenue_date <= dateTo)
     }
 
-    if (revenueStatus && revenueStatus !== 'all') {
-      result = result.filter(r => r.kioskStatus === revenueStatus)
+    if (revenueStatus === "active") {
+    result = result.filter(r => r.kioskStatus === "active")
+    }
+
+    if (revenueStatus === "inactive") {
+      result = result.filter(r => r.kioskStatus === "inactive")
     }
 
     if (sortBy === 'highest_revenue') {
@@ -163,7 +148,7 @@ export function AdminRevenuePage() {
       result.sort((a, b) => a.revenueVal - b.revenueVal)
     } else {
       // Default: date_desc (period_start desc)
-      result.sort((a, b) => new Date(b.period_start).getTime() - new Date(a.period_start).getTime())
+      result.sort((a, b) => new Date(b.revenue_date).getTime() - new Date(a.revenue_date).getTime())
     }
 
     return result
@@ -176,7 +161,7 @@ export function AdminRevenuePage() {
     const netProfit = totalRevenue - totalExpenses
     const investorProfitShare = filteredRows.reduce((sum, r) => sum + r.investorShareVal, 0)
     const platformProfit = filteredRows.reduce((sum, r) => sum + r.platformShareVal, 0)
-    const activePrinters = kiosks.filter((k: any) => k.status === 'active').length
+    const activePrinters = kiosks.filter((k: any) => k.is_active).length
 
     // Revenue logged in the current calendar month
     const now = new Date()
@@ -184,10 +169,10 @@ export function AdminRevenuePage() {
     const currentMonth = now.getMonth()
     const revenueThisMonth = revenues
       .filter((r: any) => {
-        const d = new Date(r.period_start)
+        const d = new Date(r.revenue_date)
         return d.getFullYear() === currentYear && d.getMonth() === currentMonth
       })
-      .reduce((sum: number, r: any) => sum + Number(r.amount), 0)
+      .reduce((sum: number, r: any) => sum + Number(r.upi_revenue), 0)
 
     return {
       totalRevenue,
@@ -326,9 +311,7 @@ export function AdminRevenuePage() {
               >
                 <option value="all">All statuses</option>
                 <option value="active">Active</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="suspended">Suspended</option>
-                <option value="offline">Offline</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 
@@ -403,17 +386,13 @@ export function AdminRevenuePage() {
                 </thead>
                 <tbody>
                   {filteredRows.map((row: any) => {
-                    const statusClass = 
-                      row.kioskStatus === 'active' 
-                        ? 'admin-badge-active' 
-                        : row.kioskStatus === 'maintenance' 
-                        ? 'admin-badge-maintenance' 
-                        : row.kioskStatus === 'suspended' 
-                        ? 'admin-badge-suspended' 
-                        : 'admin-badge-offline'
+                    const statusClass =
+                    row.kioskStatus === "active"
+                      ? "admin-badge-active"
+                      : "admin-badge-offline"
 
                     return (
-                      <tr key={row.id}>
+                      <tr key={`${row.branch_id}-${row.revenue_date}`}>
                         <td style={{ fontWeight: 500 }}>{row.investorName}</td>
                         <td>{row.collegeName}</td>
                         <td style={{ fontWeight: 500, color: 'var(--gray)' }}>{row.printerCode}</td>

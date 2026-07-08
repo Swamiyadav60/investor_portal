@@ -24,7 +24,7 @@ interface ExpenseRow {
   admin_remarks: string | null
   expense_name: string | null
   expense_catalog_id: string | null
-  kiosk: { id: string; name: string; location: string } | null
+  branch: { id: string; name: string; location: string } | null
   submitted_by_inv: { id: string; full_name: string } | null
   approved_by_inv: { id: string; full_name: string } | null
   catalog_item?: { id: string; name: string; default_amount: number; expense_mode: 'fixed' | 'custom' } | null
@@ -71,7 +71,7 @@ export function AdminExpensesPage() {
     queryKey: ['admin-expense-counts'],
     queryFn: async () => {
       const { data } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .select('status, amount, category, expense_name')
       const rows = data || []
       return {
@@ -97,14 +97,14 @@ export function AdminExpensesPage() {
     queryKey: ['admin-expenses-v2', tab],
     queryFn: async (): Promise<ExpenseRow[]> => {
       const { data, error } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .select(`
           id, created_at, category, expense_type, amount, notes, bill_url,
           status, approved_at, rejected_at, rejection_reason, admin_remarks,
           expense_name, expense_catalog_id,
-          kiosk:kiosks(id, name, location),
-          submitted_by_inv:investors!expenses_submitted_by_fkey(id, full_name),
-          approved_by_inv:investors!expenses_approved_by_fkey(id, full_name),
+          branch:branches(id, name, location),
+          submitted_by_inv:users!branch_expenses_submitted_by_fkey(id, full_name),
+          approved_by_inv:users!branch_expenses_approved_by_fkey(id, full_name),
           catalog_item:expense_catalog_id(id, name, default_amount, expense_mode)
         `)
         .eq('status', tab)
@@ -112,8 +112,8 @@ export function AdminExpensesPage() {
       if (error) {
         // Fallback: simpler select without aliased joins if FK aliases not defined
         const { data: fallback, error: e2 } = await supabase
-          .from('expenses')
-          .select('*, kiosk:kiosks(id, name, location), submitted_by:investors(id, full_name)')
+          .from('branch_expenses')
+          .select('*, branch:branches(id, name, location), submitted_by:users(id, full_name)')
           .eq('status', tab)
           .order('created_at', { ascending: false })
         if (e2) throw e2
@@ -166,7 +166,7 @@ export function AdminExpensesPage() {
     const seen = new Set<string>()
     const list: string[] = []
     expenses.forEach(e => {
-      const loc = e.kiosk?.location
+      const loc = e.branch?.location
       if (loc && !seen.has(loc)) { seen.add(loc); list.push(loc) }
     })
     return list.sort()
@@ -175,9 +175,9 @@ export function AdminExpensesPage() {
   // ── Client-side filter ────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return expenses.filter(e => {
-      if (searchPrinter && !e.kiosk?.name?.toLowerCase().includes(searchPrinter.toLowerCase())) return false
+      if (searchPrinter && !e.branch?.name?.toLowerCase().includes(searchPrinter.toLowerCase())) return false
       if (searchAmbassador && !e.submitted_by_inv?.full_name?.toLowerCase().includes(searchAmbassador.toLowerCase())) return false
-      if (filterCollege && e.kiosk?.location !== filterCollege) return false
+      if (filterCollege && e.branch?.location !== filterCollege) return false
       if (dateFrom && e.created_at < dateFrom) return false
       if (dateTo && e.created_at > dateTo + 'T23:59:59') return false
       return true
@@ -194,7 +194,7 @@ export function AdminExpensesPage() {
   const approveMutation = useMutation({
     mutationFn: async (expenseId: string) => {
       const { error } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .update({ status: 'approved', approved_by: adminId, approved_at: new Date().toISOString() })
         .eq('id', expenseId)
       if (error) throw error
@@ -213,7 +213,7 @@ export function AdminExpensesPage() {
   const rejectMutation = useMutation({
     mutationFn: async ({ expenseId, reason }: { expenseId: string; reason: string }) => {
       const { error } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .update({
           status:           'rejected',
           rejection_reason: reason || null,
@@ -505,13 +505,13 @@ export function AdminExpensesPage() {
 
                       {/* College */}
                       <td style={{ color: 'var(--gray)', fontSize: 12 }}>
-                        {e.kiosk?.location || '—'}
+                        {e.branch?.location || '—'}
                       </td>
 
                       {/* Printer */}
                       <td>
                         <div style={{ fontWeight: 500, fontSize: 13 }}>
-                          {e.kiosk?.name || '—'}
+                          {e.branch?.name || '—'}
                         </div>
                       </td>
 
@@ -753,7 +753,7 @@ export function AdminExpensesPage() {
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Printer</div>
                   <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 2 }}>
-                    {rejectModal.expense.kiosk?.name || '—'}
+                    {rejectModal.expense.branch?.name || '—'}
                   </div>
                 </div>
                 <div>

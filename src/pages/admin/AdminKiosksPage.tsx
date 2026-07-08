@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 
 export function AdminKiosksPage() {
   const [showAssign, setShowAssign] = useState<string | null>(null)
-  const [assignType, setAssignType] = useState<'investor' | 'ambassador'>('investor')
+  const [assignType, setAssignType] = useState<'branch_owner' | 'branch'>('branch_owner')
   const [showAddModal, setShowAddModal] = useState(false)
   const [newKioskName, setNewKioskName] = useState('')
   const [newKioskLocation, setNewKioskLocation] = useState('')
@@ -23,16 +23,12 @@ export function AdminKiosksPage() {
     queryKey: ['admin-kiosks'],
    queryFn: async () => {
   const { data, error } = await supabase
-    .from('kiosks')
-    .select(`
-      *,
-      college:colleges(name),
-      investor_kiosks(
-        status,
-        investor:investors(id, full_name, email)
-      ),
-      branch_ambassador:investors!kiosks_branch_ambassador_id_fkey(id, full_name, email)
-    `)
+  .from("branches")
+  .select(`
+    *,
+    owner:users!branches_owner_id_fkey(id, full_name, email),
+    manager:users!branches_manager_id_fkey(id, full_name, email)
+  `)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -44,21 +40,33 @@ export function AdminKiosksPage() {
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users-simple'],
     queryFn: async () => {
-  const { data, error } = await supabase
-    .from('investors')
-    .select('id, full_name, email, role')
-    .order('full_name')
+  const { data: users, error: usersError } = await supabase
+    .from("users")
+    .select("id, full_name, email")
+    .order("full_name")
 
-  if (error) throw error
+  if (usersError) throw usersError
 
-  return data || []
+  const { data: roles, error: rolesError } = await supabase
+    .from("user_roles")
+    .select("user_id, role")
+
+  if (rolesError) throw rolesError
+
+  const data = users.map((u) => ({
+    ...u,
+    role: roles.find((r) => r.user_id === u.id)?.role ?? null,
+  }))
+
+return data
+
 }
   })
 
   const { data: colleges = [] } = useQuery({
     queryKey: ['admin-colleges-simple'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('colleges').select('id, name').order('name')
+      const { data, error } = await supabase.from('branches').select('id, name').order('name')
       if (error) throw error
       return data || []
     }
@@ -67,29 +75,48 @@ export function AdminKiosksPage() {
   const addKioskMutation = useMutation({
     mutationFn: async () => {
       const { data: kiosk, error: kioskError } = await supabase
-        .from('kiosks')
+        .from('branches')
         .insert({
-          name: newKioskName,
-          location: newKioskLocation,
-          college_id: newKioskCollegeId || null,
-          status: newKioskStatus,
-          branch_ambassador_id: newKioskAmbassadorId || null
+            name: newKioskName.trim(),
+            location: newKioskLocation.trim(),
+
+            owner_id: newKioskInvestorId || null,
+            manager_id: newKioskAmbassadorId || null,
+
+            is_active: newKioskStatus === "active",
+
+            type: "college",
+
+            slots_total: 1,
+            slots_taken: newKioskInvestorId ? 1 : 0,
+
+            investment_amount: 25000,
+            avg_monthly_earnings: 0,
+
+            price_per_page: 2,
+            price_color: 10,
+
+            phone: null,
+            email: null,
+            address: null,
+
+            telegram_alerts_enabled: false,
+            telegram_chat_id: null,
+
+            in_charge_name: null,
+            primary_phone: null,
+            secondary_phone: null,
+
+            tag: null,
+            tag_label: null,
+            image_url: null,
         })
         .select('id')
         .single()
 
       if (kioskError) throw kioskError
 
-      if (newKioskInvestorId) {
-        const { error: invError } = await supabase
-          .from('investor_kiosks')
-          .insert({
-            kiosk_id: kiosk.id,
-            investor_id: newKioskInvestorId,
-            status: 'active'
-          })
-        if (invError) throw invError
-      }
+      
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-kiosks'] })
@@ -113,18 +140,23 @@ export function AdminKiosksPage() {
       // Remove assignment
       if (userId === 'unassign') {
 
-        if (assignType === 'ambassador') {
+        if (assignType === 'branch') {
           const { error } = await supabase
-          .from('kiosks')
-          .update({ branch_ambassador_id: null })
+          .from('branches')
+          .update({
+            manager_id: null
+          })
           .eq('id', kioskId)
 
           if (error) throw error
         } else {
           const { error } = await supabase
-          .from('investor_kiosks')
-          .delete()
-          .eq('kiosk_id', kioskId)
+            .from("branches")
+            .update({
+              owner_id: null,
+              slots_taken: 0,
+            })
+          .eq("id", kioskId)
 
           if (error) throw error
         }
@@ -133,40 +165,43 @@ export function AdminKiosksPage() {
       }
 
       // Normal assignment
-      if (assignType === 'ambassador') {
+      if (assignType === 'branch') {
         const { error } = await supabase
-        .from('kiosks')
-        .update({ branch_ambassador_id: userId })
+        .from('branches')
+        .update({
+          manager_id: userId
+        })
         .eq('id', kioskId)
 
         if (error) throw error
       } else {
         const { data: existing, error: fetchError } = await supabase
-        .from('investor_kiosks')
+        .from('branches')
         .select('id')
-        .eq('kiosk_id', kioskId)
+        .eq('id', kioskId)
         .limit(1);
 
         if (fetchError) throw fetchError;
 
         if (existing && existing.length > 0) {
           const { error } = await supabase
-          .from('investor_kiosks')
+          .from('branches')
           .update({
-            investor_id: userId,
-            status: 'active'
+            owner_id: userId,
+            slots_taken: 1
           })
           .eq('id', existing[0].id);
 
           if (error) throw error;
         } else {
           const { error } = await supabase
-          .from('investor_kiosks')
-          .insert({
-            kiosk_id: kioskId,
-            investor_id: userId,
-            status: 'active'
-          });
+            .from("branches")
+            .update({
+              owner_id: userId,
+              slots_taken: 1
+            })
+            .eq("id", kioskId)
+
 
           if (error) throw error;
         }
@@ -189,7 +224,7 @@ export function AdminKiosksPage() {
 
   const handleOpenAssign = (kioskId: string) => {
     setShowAssign(kioskId)
-    setAssignType('investor')
+    setAssignType('branch_owner')
     setSelectedUserId('')
   }
 
@@ -198,7 +233,9 @@ export function AdminKiosksPage() {
     assignMutation.mutate({ kioskId: showAssign, userId: selectedUserId })
   }
 
-  const filteredUsers = users.filter(u => u.role === (assignType === 'ambassador' ? 'branch_ambassador' : 'investor'))
+  const filteredUsers = users.filter(
+  u => u.role === assignType
+)
 
   return (
     <>
@@ -234,17 +271,17 @@ export function AdminKiosksPage() {
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>No kiosks registered.</td></tr>
                 ) : (
                   kiosks.map((k: any) => {
-                    const activeInvestor = k.investor_kiosks?.[0]?.investor
-                    const ambassador = k.branch_ambassador
+                    const activeInvestor = k.owner
+                    const ambassador = k.manager
 
                     return (
                       <tr key={k.id}>
                         <td style={{ fontWeight: 500 }}>{k.name}</td>
                         <td>{k.location}</td>
-                        <td>{k.college?.name || 'Main Campus'}</td>
+                        <td>{k.name}</td>
                         <td>
-                          <span className={`admin-badge ${k.status === 'active' ? 'admin-badge-active' : k.status === 'maintenance' ? 'admin-badge-maintenance' : k.status === 'suspended' ? 'admin-badge-suspended' : 'admin-badge-offline'}`}>
-                            {k.status}
+                          <span className={`admin-badge ${k.is_active ? "admin-badge-active" : "admin-badge-offline"}`}>
+                            {k.is_active ? "Active" : "Inactive"}
                           </span>
                         </td>
                         <td style={{ color: activeInvestor ? 'var(--ink)' : 'var(--gray)', fontStyle: activeInvestor ? 'normal' : 'italic', fontSize: '13px' }}>
@@ -277,12 +314,12 @@ export function AdminKiosksPage() {
                   className="admin-form-input"
                   value={assignType}
                   onChange={(e) => {
-                    setAssignType(e.target.value as 'investor' | 'ambassador')
+                    setAssignType(e.target.value as 'branch_owner' | 'branch')
                     setSelectedUserId('')
                   }}
                 >
-                  <option value="investor">Assign to Investor (Investment Slot)</option>
-                  <option value="ambassador">Assign to Branch Ambassador (Operational Lead)</option>
+                  <option value="branch_owner">Assign to Branch Owner</option>
+                  <option value="branch">Assign to Branch Manager</option>
                 </select>
               </div>
 
@@ -293,7 +330,7 @@ export function AdminKiosksPage() {
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
                 >
-                  <option value="">-- Select {assignType === 'ambassador' ? 'Ambassador' : 'Investor'} --</option>
+                  <option value="">-- Select {assignType === 'branch' ? 'Ambassador' : 'Investor'} --</option>
                   <option value="unassign">
                     Not Assigned
                   </option>
@@ -386,7 +423,7 @@ export function AdminKiosksPage() {
                   onChange={(e) => setNewKioskInvestorId(e.target.value)}
                 >
                   <option value="">-- None --</option>
-                  {users.filter(u => u.role === 'investor').map((u) => (
+                  {users.filter(u => u.role === 'branch_owner').map((u) => (
                     <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                   ))}
                 </select>
@@ -400,7 +437,7 @@ export function AdminKiosksPage() {
                   onChange={(e) => setNewKioskAmbassadorId(e.target.value)}
                 >
                   <option value="">-- None --</option>
-                  {users.filter(u => u.role === 'branch_ambassador').map((u) => (
+                  {users.filter(u => u.role === 'branch').map((u) => (
                     <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                   ))}
                 </select>

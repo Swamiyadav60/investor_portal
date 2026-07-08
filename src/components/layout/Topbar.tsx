@@ -25,25 +25,21 @@ const { data: kiosks = [] } = useQuery({
   enabled: !!investor?.id,
   queryFn: async () => {
     
-    const { data: assignments, error: assignmentError } =
-      await supabase
-        .from('investor_kiosks')
-        .select('kiosk_id')
-        .eq('investor_id', investor!.id)
-        .eq('status', 'active')
+    const { data: branches } = await supabase
+      .from("branches")
+      .select("id")
+      .eq("owner_id", investor!.id)
+      .eq("is_active", true)
 
-    if (assignmentError) throw assignmentError
-
-    const kioskIds =
-      assignments?.map(a => a.kiosk_id) || []
+  const kioskIds = branches?.map(b => b.id) || []
 
     if (!kioskIds.length) return []
     
 
     const { data: kiosks, error: kioskError } =
       await supabase
-        .from('kiosks')
-        .select('id,name,location,status')
+        .from('branches')
+        .select('id,name,location,is_active')
         .in('id', kioskIds)
       
     if (kioskError) throw kioskError

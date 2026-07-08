@@ -17,16 +17,16 @@ export function BranchDashboardPage() {
   const { investor } = useAuth()
   const navigate = useNavigate()
 
-  // 1. Fetch assigned kiosks directly from kiosks table
+  // Fetch assigned branches
   const { data: assignedKiosks = [] } = useQuery({
     queryKey: ['branch-kiosks', investor?.id],
     enabled: !!investor?.id,
     queryFn: async () => {
       
       const { data, error } = await supabase
-        .from('kiosks')
-        .select('*')
-        .eq('branch_ambassador_id', investor!.id)
+      .from('branches')
+      .select('*')
+      .eq('manager_id', investor!.id)
 
       if (error) throw error
       return data || []
@@ -41,7 +41,10 @@ export function BranchDashboardPage() {
       
       const { data, error } = await supabase
         .from('expenses')
-        .select('*, kiosk:kiosks(name)')
+        .select(`
+          *,
+          branch:branches(name)
+        `)
         .eq('submitted_by', investor!.id)
         .order('created_at', { ascending: false })
 
@@ -84,10 +87,10 @@ export function BranchDashboardPage() {
               fontWeight: 700,
               marginBottom: '8px'
             }}>
-              Welcome back, {investor?.full_name || 'Ambassador'}!
+              Welcome back, {investor?.full_name || 'Branch Manager'}!
             </h1>
             <p className="banner-sub" style={{ fontSize: '14px', opacity: 0.9, maxWidth: '500px', lineHeight: 1.5 }}>
-              You are managing campus kiosks. Log utility bills, paper refilling, or drum replacement expenses to keep our operations running smoothly.
+              You are managing your assigned branches and printers. Log utility bills, paper refilling, or drum replacement expenses to keep our operations running smoothly.
             </p>
             <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
               <Link to="/branch/log-expense" className="btn-primary" style={{
@@ -194,7 +197,7 @@ export function BranchDashboardPage() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Kiosk / Printer</th>
+                  <th>Branch</th>
                   <th>Category</th>
                   <th>Amount</th>
                   <th>Status</th>
@@ -218,7 +221,7 @@ export function BranchDashboardPage() {
                           year: 'numeric'
                         })}
                       </td>
-                      <td>{exp.kiosk?.name || 'Smart Printer'}</td>
+                      <td>{exp.branch?.name || 'Smart Printer'}</td>
                       <td>
                         <span style={{
                           background: 'var(--gray-l)',

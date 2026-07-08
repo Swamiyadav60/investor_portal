@@ -15,9 +15,9 @@ export function PayoutsPage() {
     enabled: !!investor?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('payments')
+        .from('withdrawals')
         .select('*')
-        .eq('investor_id', investor!.id)
+        .eq('user_id', investor!.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -30,20 +30,20 @@ export function PayoutsPage() {
     enabled: !!investor?.id,
     queryFn: async () => {
       const { data: assignments } = await supabase
-        .from('investor_kiosks')
-        .select('kiosk_id')
-        .eq('investor_id', investor!.id)
-        .eq('status', 'active')
+        .from('branches')
+        .select('id')
+        .eq('owner_id', investor!.id)
+        .eq('is_active', true)
 
       const kioskIds =
-        assignments?.map(a => a.kiosk_id) || []
+        assignments?.map(a => a.id) || []
 
       if (!kioskIds.length) return []
 
       const { data } = await supabase
-        .from('revenues')
-        .select('amount')
-        .in('kiosk_id', kioskIds)
+        .from('branch_daily_revenue')
+        .select('upi_revenue,wallet_amount')
+        .in('branch_id', kioskIds)
 
       return data || []
     }
@@ -53,34 +53,36 @@ export function PayoutsPage() {
     enabled: !!investor?.id,
     queryFn: async () => {
       const { data: assignments } = await supabase
-        .from('investor_kiosks')
-        .select('kiosk_id')
-        .eq('investor_id', investor!.id)
-        .eq('status', 'active')
+        .from('branches')
+        .select('id')
+        .eq('owner_id', investor!.id)
+        .eq('is_active', true)
 
       const kioskIds =
-        assignments?.map(a => a.kiosk_id) || []
+        assignments?.map(a => a.id) || []
 
       if (!kioskIds.length) return []
 
       const { data } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .select('amount')
-        .in('kiosk_id', kioskIds)
+        .in('branch_id', kioskIds)
         .eq('status', 'approved')
 
       return data || []
     }
   })
-  const totalRevenue =
-    revenues.reduce(
-      (sum, r) => sum + Number(r.amount),
-      0
-    )
+  const totalRevenue = revenues.reduce(
+  (sum, r) =>
+    sum +
+    Number(r.upi_revenue ?? 0) +
+    Number(r.wallet_amount ?? 0),
+  0
+)
 
   const totalExpenses =
     expenses.reduce(
-      (sum, e) => sum + Number(e.amount),
+      (sum, e) => sum + Number(e.amount ?? 0),
       0
     )
 
@@ -107,11 +109,10 @@ export function PayoutsPage() {
     if (!amt || amt <= 0) { toast('Please enter a valid amount.', 'error'); return }
     if (amt > availableBalance) { toast(`Amount exceeds available balance of ${fmt(availableBalance)}.`, 'error'); return }
 
-    const activeAccount = investor?.bank_account_number || investor?.bank_account
-
+    const activeAccount = investor?.bank_account_number
     if (isSupabaseConfigured && investor) {
-      const { error } = await supabase.from('payments').insert({
-        investor_id: investor.id,
+      const { error } = await supabase.from('withdrawals').insert({
+        user_id: investor.id,
         amount: amt,
         status: 'pending',
         payment_type: 'withdrawal',
@@ -161,7 +162,7 @@ export function PayoutsPage() {
             <div className="rpt-kpi-lbl">Next scheduled payout</div>
           </div>
           <div className="rpt-kpi">
-            <div className="rpt-kpi-val">{investor?.bank_name || '-'} {maskBankAccount(investor?.bank_account_number || investor?.bank_account)}</div>
+            <div className="rpt-kpi-val">{investor?.bank_name || '-'} {maskBankAccount(investor?.bank_account_number)}</div>
             <div className="rpt-kpi-lbl">Linked account</div>
           </div>
         </div>
@@ -282,8 +283,8 @@ export function PayoutsPage() {
           </div>
           {[
             { l: 'Bank name', v: investor?.bank_name || '-' },
-            { l: 'Account no.', v: maskBankAccount(investor?.bank_account_number || investor?.bank_account) },
-            { l: 'IFSC code', v: investor?.ifsc_code || investor?.bank_ifsc || '-' },
+            { l: 'Account no.', v: maskBankAccount(investor?.bank_account_number ) },
+            { l: 'IFSC code', v: investor?.ifsc_code || '-' },
             { l: 'Account type', v: investor?.bank_account_type || '-' },
             { l: 'UPI ID', v: investor?.upi_id || '-' },
           ].map((r) => (

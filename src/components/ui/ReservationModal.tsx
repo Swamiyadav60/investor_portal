@@ -4,16 +4,16 @@ import { supabase } from '@/lib/supabase'
 import { initiatePayment } from '@/lib/razorpay'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/Toast'
-import type { College } from '@/types/database'
+import type { Branch } from '@/types/database'
 import { fmt } from '@/lib/format'
 
 interface ReservationModalProps {
-  college: College | null
+  branch: Branch | null
   isOpen: boolean
   onClose: () => void
 }
 
-export function ReservationModal({ college, isOpen, onClose }: ReservationModalProps) {
+export function ReservationModal({ branch, isOpen, onClose }: ReservationModalProps) {
   const [type, setType] = useState<'free' | 'priority'>('priority')
   const [successData, setSuccessData] = useState<{ position: number; isPriority: boolean } | null>(null)
   const { investor } = useAuth()
@@ -21,12 +21,12 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
 
   const reservationMutation = useMutation({
     mutationFn: async (paymentId: string | null = null) => {
-      if (!college || !investor) return
+      if (!branch || !investor) return
 
       // Call the join_waitlist RPC which handles shifting and positioning
       const { data: pos, error } = await supabase.rpc('join_waitlist', {
         p_investor_id: investor.id,
-        p_college_id: college.id,
+        p_college_id: branch.id,
         p_waitlist_type: type,
         p_payment_id: paymentId,
         p_notes: type === 'priority' ? `Priority Waitlist (Paid ₹499 via Razorpay)` : 'Free Waitlist'
@@ -50,7 +50,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
       try {
         await initiatePayment({
           amount: 499,
-          description: `Priority Waitlist: ${college?.name}`,
+          description: `Priority Waitlist: ${branch?.name}`,
           name: investor?.full_name || '',
           email: investor?.email || '',
           onSuccess: (res) => reservationMutation.mutate(res.razorpay_payment_id),
@@ -69,7 +69,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
     onClose()
   }
 
-  if (!isOpen || !college) return null
+  if (!isOpen || !branch) return null
 
   if (successData) {
     return (
@@ -86,8 +86,8 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
           </h2>
           <p className="section-subtitle" style={{ marginBottom: '1.5rem' }}>
             {successData.isPriority
-              ? `You are now in the Priority Waitlist for ${college.name}`
-              : `You are now in queue for ${college.name}`}
+              ? `You are now in the Priority Waitlist for ${branch.name}`
+              : `You are now in queue for ${branch.name}`}
           </p>
 
           <div className="queue-pill" style={{ borderColor: successData.isPriority ? 'var(--amber)' : 'var(--border)' }}>
@@ -114,7 +114,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         <div className="rpt-card-header" style={{ marginBottom: '1.5rem' }}>
           <div>
             <div className="rpt-card-title" style={{ fontSize: 18 }}>Investor Waitlist</div>
-            <div className="rpt-card-sub">{college.name} · {college.city}</div>
+            <div className="rpt-card-sub">{branch?.name} · {branch?.location}</div>
           </div>
           <button className="admin-btn-secondary" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
         </div>
@@ -150,7 +150,7 @@ export function ReservationModal({ college, isOpen, onClose }: ReservationModalP
         <div className="reservation-summary">
           <div className="summary-row">
             <span>Location Investment</span>
-            <span>{fmt(college.investment_amount)}</span>
+            <span>{fmt(branch?.investment_amount)}</span>
           </div>
         </div>
 

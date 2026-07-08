@@ -13,7 +13,7 @@ export function LoginPage() {
   // Basic states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [selectedRole, setSelectedRole] = useState<UserRole>('investor')
+  const [selectedRole, setSelectedRole] = useState<UserRole>('branch_owner')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -57,8 +57,8 @@ export function LoginPage() {
       toast('Logged in successfully.', 'success')
 
       const role = profile?.role
-      if (role === 'branch_ambassador') {
-        navigate('/branch/dashboardPage')
+      if (role === 'branch') {
+        navigate('/branch/dashboard')
       } else if (role === 'admin') {
         navigate('/admin/colleges')
       } else {
@@ -66,7 +66,7 @@ export function LoginPage() {
       }
       setLoading(false)
     } catch (err: any) {
-      const roleLabel = selectedRole === 'branch_ambassador' ? 'Ambassador' : 'Investor'
+      const roleLabel = selectedRole === 'branch'? 'Branch': 'Branch Owner'
       const errMsg = err?.code === 'ROLE_MISMATCH'
         ? `This account is not registered as ${roleLabel}. Please select the correct role and try again.`
         : getAuthErrorMessage(err)
@@ -79,7 +79,7 @@ export function LoginPage() {
 
   const handleDemo = () => {
     loginAsDemo(selectedRole)
-    if (selectedRole === 'branch_ambassador') {
+    if (selectedRole === 'branch'){
       navigate('/branch/dashboard')
     } else {
       navigate('/dashboard')
@@ -87,11 +87,11 @@ export function LoginPage() {
   }
 
   const roleConfig = {
-    investor: {
+    branch_owner: {
       title: 'Welcome back',
       sub: 'Sign in to your investor dashboard',
     },
-    branch_ambassador: {
+    branch: {
       title: 'Welcome back',
       sub: 'Sign in to your branch ambassador portal',
     },
@@ -218,8 +218,8 @@ export function LoginPage() {
 
           <div className="role-cards-grid">
             <div 
-              className={`role-card-item ${selectedRole === 'investor' ? 'active' : ''}`}
-              onClick={() => setSelectedRole('investor')}
+              className={`role-card-item ${selectedRole === 'branch_owner' ? 'active' : ''}`}
+              onClick={() => setSelectedRole('branch_owner')}
             >
               <div className="role-card-icon-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -232,8 +232,8 @@ export function LoginPage() {
             </div>
 
             <div 
-              className={`role-card-item ${selectedRole === 'branch_ambassador' ? 'active' : ''}`}
-              onClick={() => setSelectedRole('branch_ambassador')}
+              className={`role-card-item ${selectedRole === 'branch' ? 'active' : ''}`}
+              onClick={() => setSelectedRole('branch')}
             >
               <div className="role-card-icon-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +292,7 @@ export function LoginPage() {
             <>
               <div className="auth-divider">demo mode</div>
               <button className="auth-btn-outline" onClick={handleDemo}>
-                Enter {selectedRole === 'admin' ? 'Admin' : selectedRole === 'branch_ambassador' ? 'Ambassador' : ''} Demo Dashboard →
+                Enter {selectedRole === 'admin' ? 'Admin' : selectedRole === 'branch' ? 'Branch' : selectedRole === 'branch_owner' ? 'Branch Owner' : ''} Demo Dashboard →
               </button>
               <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: '.75rem', textAlign: 'center' }}>
                 Supabase not configured. Using mock data.
@@ -300,7 +300,7 @@ export function LoginPage() {
             </>
           )}
 
-          {selectedRole === 'investor' && (
+          {selectedRole === 'branch_owner' && (
             <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
               <span className="auth-link" onClick={() => navigate('/signup')}>
                 Don't have an account? Sign up

@@ -19,7 +19,7 @@ export function AdminAnalyticsPage() {
       const { data, error } = await supabase
         .from('revenues')
         .select('*')
-        .order('period_start')
+        .order('revenue_date', { ascending: true })
       if (error) throw error
       return data || []
     },
@@ -43,38 +43,63 @@ export function AdminAnalyticsPage() {
     queryKey: ['admin-kpis'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_admin_kpis').single()
-      if (error) {
-        // Fallback: compute manually
-        const [colleges, waitlists] = await Promise.all([
-          supabase.from('colleges').select('slots_total, slots_taken'),
-          supabase.from('waitlists').select('waitlist_type, razorpay_payment_id'),
-        ])
-        const colData   = colleges.data || []
-        const wlData    = waitlists.data || []
-        return {
-          total_colleges:           colData.length,
-          available_slots:          colData.reduce((s: number, c: any) => s + (c.slots_total - c.slots_taken), 0),
-          free_waitlists:           wlData.filter((w: any) => w.waitlist_type === 'free').length,
-          priority_waitlists:       wlData.filter((w: any) => w.waitlist_type === 'priority').length,
-          priority_waitlist_revenue: wlData.filter((w: any) => w.waitlist_type === 'priority' && w.razorpay_payment_id).length * 499,
-        } as AdminKpis
-      }
-      return data as AdminKpis
+
+if (error) {
+  const [branches, waitlists] = await Promise.all([
+    supabase
+      .from('branches')
+      .select('slots_total, slots_taken'),
+
+    supabase
+      .from('branch_waitlist')
+      .select('waitlist_type, razorpay_payment_id'),
+  ])
+
+  const branchData = branches.data || []
+  const wlData = waitlists.data || []
+
+  return {
+  total_branches: branchData.length,
+
+  available_slots: branchData.reduce(
+    (s: number, c: any) =>
+      s + (Number(c.slots_total ?? 0) - Number(c.slots_taken ?? 0)),
+    0
+  ),
+
+  free_waitlists: wlData.filter(
+    (w: any) => w.waitlist_type === 'free'
+  ).length,
+
+  priority_waitlists: wlData.filter(
+    (w: any) => w.waitlist_type === 'priority'
+  ).length,
+
+  priority_waitlist_revenue:
+    wlData.filter(
+      (w: any) =>
+        w.waitlist_type === 'priority' &&
+        w.razorpay_payment_id
+    ).length * 499,
+} as AdminKpis
+}
+
+return data as AdminKpis
     },
   })
 
   // ── Platform totals ───────────────────────────────────────────
-  const totalRevenue = revenues.reduce((s: number, r: any) => s + Number(r.amount), 0)
+  const totalRevenue = revenues.reduce((s: number, r: any) => s + Number(r.upi_revenue ?? 0)+Number(r.wallet_amount ?? 0), 0)
   const totalExp     = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0)
   const totalProfit  = totalRevenue - totalExp
-  const totalJobs    = revenues.reduce((s: number, r: any) => s + Number(r.print_jobs || 0), 0)
+  const totalJobs    = revenues.reduce((s: number, r: any) => s + Number(r.upi_jobs ?? 0)+Number(r.wallet_jobs ?? 0), 0)
 
   // ── Chart data ────────────────────────────────────────────────
   const chartLabels = MONTHS_SHORT
   const chartValues = chartLabels.map((_, idx) => {
-    const monthRevs = revenues.filter((r: any) => new Date(r.period_start).getMonth() === idx)
-    const monthExps = expenses.filter((e: any) => new Date(e.period_start).getMonth() === idx)
-    const rev = monthRevs.reduce((s: number, r: any) => s + Number(r.amount), 0)
+    const monthRevs = revenues.filter((r: any) => new Date(r.revenue_date).getMonth() === idx)
+    const monthExps = expenses.filter((e: any) => new Date(e.expense_date).getMonth() === idx)
+    const rev = monthRevs.reduce((s: number, r: any) => s + Number(r.upi_revenue ?? 0)+Number(r.wallet_amount ?? 0), 0)
     const exp = monthExps.reduce((s: number, e: any) => s + Number(e.amount), 0)
     return graphMetric === 'revenue' ? rev : rev - exp
   })
@@ -124,8 +149,8 @@ export function AdminAnalyticsPage() {
         {/* Admin KPI stats */}
         <div className="stats-row">
           <div className="stat-card">
-            <div className="stat-label">Total Colleges</div>
-            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.total_colleges ?? '—'}</div>
+            <div className="stat-label">Total Branches</div>
+            <div className="stat-value">{loadingKpis ? '...' : adminKpis?.total_branches ?? '—'}</div>
             <div className="stat-sub">Locations registered</div>
           </div>
           <div className="stat-card">

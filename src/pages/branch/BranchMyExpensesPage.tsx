@@ -5,11 +5,11 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { fmt } from '@/lib/format'
-import type { Expense, ExpenseCatalogItem } from '@/types/database'
+import type { BranchExpense as Expense, ExpenseCatalogItem } from '@/types/database'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const INITIAL_FORM = {
-  kiosk_id: '',
+  branch_id: '',
   expense_catalog_id: '',
   description: '',
   amount: '',
@@ -73,10 +73,10 @@ export function BranchMyExpensesPage() {
     enabled: !!investor?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('kiosks')
-        .select('id, name, location, status')
-        .eq('branch_ambassador_id', investor!.id)
-        .order('name')
+      .from('branches')
+      .select('id, name, location, is_active')
+      .eq('manager_id', investor!.id)
+      .order('name')
       if (error) throw error
       return data || []
     },
@@ -119,14 +119,28 @@ export function BranchMyExpensesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expenses')
-        .select('*, kiosk:kiosks(id, name, location)')
+        .select(`
+          *,
+          branch:branches(
+          id,
+          name,
+          location
+        )
+      `)
         .eq('submitted_by', investor!.id)
         .order('created_at', { ascending: false })
       if (error) {
         // Fallback: try created_by if submitted_by column doesn't exist yet
         const { data: fallback, error: err2 } = await supabase
           .from('expenses')
-          .select('*, kiosk:kiosks(id, name, location)')
+          .select(`
+            *,
+            branch:branches(
+            id,
+            name,
+            location
+          )
+        `)
           .eq('created_by', investor!.id)
           .order('created_at', { ascending: false })
         if (err2) throw err2
@@ -166,7 +180,7 @@ export function BranchMyExpensesPage() {
   // ── Submit mutation ──────────────────────────────────────────────────────
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!form.kiosk_id) throw new Error('Please select a printer')
+      if (!form.branch_id) throw new Error('Please select a branch')
       if (!form.expense_catalog_id) throw new Error('Please select an expense type')
       if (!selectedCatalogItem) throw new Error('Selected expense type is invalid')
       if (!form.amount || Number(form.amount) <= 0) throw new Error('Please enter a valid amount')
@@ -195,7 +209,7 @@ export function BranchMyExpensesPage() {
         const isFixedCategory = ['Rent / Space', 'Internet / Electricity', 'Staff', 'Insurance'].includes(selectedCatalogItem.category)
 
         const payload = {
-          kiosk_id:           form.kiosk_id,
+          branch_id: form.branch_id,
           expense_type:       isFixedCategory ? 'fixed' : 'variable',
           category:           selectedCatalogItem.category,
           expense_name:       selectedCatalogItem.name,
@@ -272,23 +286,23 @@ export function BranchMyExpensesPage() {
             {/* Row 1: Printer + Expense Type */}
             <div className="admin-form-row">
               <div className="admin-form-group">
-                <label className="admin-form-label">Assigned Printer *</label>
+                <label className="admin-form-label">Assigned Branches *</label>
                 {loadingKiosks ? (
                   <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
-                    Loading printers...
+                    Loading branches...
                   </div>
                 ) : assignedKiosks.length === 0 ? (
                   <div className="admin-form-input" style={{ color: 'var(--gray)', display: 'flex', alignItems: 'center' }}>
-                    No printers assigned to you yet
+                    No branches assigned to you yet
                   </div>
                 ) : (
                   <select
                     className="admin-form-input"
-                    value={form.kiosk_id}
-                    onChange={e => setForm({ ...form, kiosk_id: e.target.value })}
+                    value={form.branch_id}
+                    onChange={e => setForm({ ...form, branch_id: e.target.value })}
                     required
                   >
-                    <option value="">— Select printer —</option>
+                    <option value="">— Select branches —</option>
                     {assignedKiosks.map((k: any) => (
                       <option key={k.id} value={k.id}>
                         {k.name} · {k.location}
@@ -492,7 +506,7 @@ export function BranchMyExpensesPage() {
                 style={{ minWidth: 160, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
                 disabled={
                   isSubmitting ||
-                  !form.kiosk_id ||
+                  !form.branch_id ||
                   !form.expense_catalog_id ||
                   !form.amount ||
                   !form.description ||
@@ -608,7 +622,7 @@ export function BranchMyExpensesPage() {
                 <thead>
                   <tr>
                     <th>Submission Date</th>
-                    <th>Printer</th>
+                    <th>Branch</th>
                     <th>Expense Type</th>
                     <th>Description</th>
                     <th>Amount</th>
@@ -629,10 +643,10 @@ export function BranchMyExpensesPage() {
                         </td>
                         <td>
                           <div style={{ fontWeight: 500, fontSize: 13 }}>
-                            {(e.kiosk as any)?.name || '—'}
+                            {(e.branch as any)?.name || '—'}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--gray)' }}>
-                            {(e.kiosk as any)?.location}
+                            {(e.branch as any)?.location}
                           </div>
                         </td>
                         <td>

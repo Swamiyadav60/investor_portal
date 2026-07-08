@@ -8,8 +8,8 @@ export function BranchReferralsPage() {
         <div className="rpt-card">
           <div className="rpt-card-header">
             <div>
-              <div className="rpt-card-title">Recent Referrals</div>
-              <div className="rpt-card-sub">Track investors you have brought onto the platform.</div>
+              <div className="rpt-card-title">Referral Dashboard</div>
+              <div className="rpt-card-sub">Track users who joined using your referral code.</div>
             </div>
           </div>
           <div className="rpt-table-wrap">
@@ -25,7 +25,7 @@ export function BranchReferralsPage() {
               <tbody>
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray)' }}>
-                    No referrals yet. Share your referral link to get started.
+                    No referrals found yet. Share your referral code to start earning referral rewards.
                   </td>
                 </tr>
               </tbody>

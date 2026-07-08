@@ -1,27 +1,165 @@
-export type UserRole = 'investor' | 'branch_ambassador' | 'admin'
-export type KioskStatus = 'active' | 'pending' | 'offline' | 'maintenance' | 'suspended'
-export type ExpenseType = 'variable' | 'fixed'
-/**
- * Expense approval workflow statuses.
- *   pending  – submitted by Branch Ambassador, awaiting admin review.
- *   approved – admin has approved; counts in investor P&L reports.
- *   rejected – admin has rejected; does NOT count in reports.
- */
-export type ExpenseStatus = 'pending' | 'approved' | 'rejected'
-export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled'
-export type PaymentType = 'payout' | 'withdrawal' | 'investment'
-export type KycStatus = 'pending' | 'verified' | 'rejected' | 'unverified'
-export type WaitlistStatus = 'pending' | 'approved' | 'rejected' | 'converted'
+// ==============================
+// ENUMS
+// ==============================
 
-export interface AdminKpis {
-  total_colleges: number
-  available_slots: number
-  free_waitlists: number
-  priority_waitlists: number
-  priority_waitlist_revenue: number
+export type UserRole =
+  | "admin"
+  | "branch"
+  | "branch_owner"
+
+export type PaymentStatus =
+  | "pending"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "cancelled"
+
+export type PaymentType =
+  | "investment"
+  | "payout"
+  | "withdrawal"
+
+export type ExpenseStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+
+export type ExpenseType =
+  | "fixed"
+  | "variable"
+
+export type WaitlistStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "converted"
+
+export type KycStatus =
+  | "pending"
+  | "verified"
+  | "rejected"
+
+export type BranchStatus =
+  | "active"
+  | "inactive"
+
+export interface User {
+  id: string
+
+  email: string | null
+  full_name: string | null
+  phone: string | null
+
+  upi_id: string | null
+
+  wallet: number
+
+  referral_code: string | null
+  referral_code_input: string | null
+
+  referred_by: string | null
+
+  role?: UserRole
+  branch_id?: string | null
+
+  mobile_number: string | null
+
+  pan_number: string | null
+
+  aadhaar_number: string | null
+
+  bank_account_holder: string | null
+
+  bank_account_number: string | null
+
+  bank_name: string | null
+
+  ifsc_code: string | null
+
+  // Added
+  bank_account_type: string | null
+
+  dob: string | null
+
+  address: string | null
+
+  state: string | null
+
+  pincode: string | null
+
+  kyc_status: KycStatus | null
+
+  kyc_completed: boolean
+
+  bank_completed: boolean
+
+  profile_completed: boolean
+
+  kyc_submitted_at: string | null
+
+  created_at: string
+
+  updated_at: string | null
+
+  // Runtime-only fields (not database columns)
+  city?: string | null
+  gst?: string | null
+  avatar_initials?: string | null
+
+  notification_prefs?: NotificationPrefs | null
+
+  user_role?: UserRoleRow | null
+  user_kyc?: UserKyc | null
+  profit_share: number | null
 }
+export interface UserRoleRow {
+  id: string
 
+  user_id: string
 
+  role: UserRole
+
+  branch_id: string | null
+}
+export interface UserKyc {
+  id: string
+
+  user_id: string
+
+  mobile_number: string | null
+
+  pan_number: string | null
+
+  aadhaar_number: string | null
+
+  dob: string | null
+
+  address: string | null
+
+  city: string | null
+
+  state: string |null
+
+  pincode: string | null
+
+  bank_account_holder: string | null
+
+  bank_account_number: string | null
+
+  ifsc_code: string | null
+
+  bank_name: string | null
+
+  bank_account_type: string | null
+
+  kyc_status: KycStatus
+
+  kyc_submitted_at: string | null
+
+  created_at: string
+
+  updated_at: string
+}
 export interface NotificationPrefs {
   job_alerts: boolean
   daily_summary: boolean
@@ -29,288 +167,483 @@ export interface NotificationPrefs {
   maintenance_alerts: boolean
   new_slots: boolean
 }
+// ==============================
+// BRANCH
+// ==============================
 
-export interface Investor {
+export interface Branch {
   id: string
-  user_id: string
-  full_name: string
-  email: string
-  phone: string | null
-  city: string | null
-  pan: string | null
-  gst: string | null
-  role: UserRole
-  assigned_college_id: string | null
-  profit_share: number
-  kyc_status: KycStatus
-  bank_name: string | null
-  bank_account: string | null
-  bank_ifsc: string | null
-  bank_account_type: string | null
-  upi_id: string | null
-  avatar_initials: string | null
-  notification_prefs: NotificationPrefs
-  created_at: string
-  updated_at: string
-  // KYC and Bank columns (from migration 012)
-  mobile_number: string | null
-  pan_number: string | null
-  aadhaar_number: string | null
-  bank_account_holder: string | null
-  bank_account_number: string | null
-  ifsc_code: string | null
-  kyc_submitted_at: string | null
-  // Profile completion columns (from migration 013)
-  dob: string | null
-  address: string | null
-  state: string | null
-  pincode: string | null
-  kyc_completed: boolean
-  bank_completed: boolean
-  profile_completed: boolean
-}
 
-// --- Signup Flow Interfaces ---
-
-export interface SignupFormData {
-  fullName: string
-  email: string
-  phone: string
-  password: string
-  confirmPassword: string
-}
-
-export interface KycFormData {
-  panNumber: string
-  aadhaarNumber: string
-  dob: string
-  address: string
-  city: string
-  state: string
-  pincode: string
-}
-
-export interface BankFormData {
-  accountHolderName: string
-  bankName: string
-  accountNumber: string
-  confirmAccountNumber: string
-  ifscCode: string
-  upiId: string
-}
-
-export interface OnboardingFormData {
-  fullName: string
-  email: string
-  phone: string
-  kyc: KycFormData
-  bank: BankFormData
-}
-
-// --- Existing Interfaces (unchanged) ---
-
-export interface College {
-  id: string
   name: string
+
   location: string
-  city: string
-  type: string
-  slots_total: number
-  slots_taken: number
-  investment_amount: number
-  avg_monthly_earnings: number
-  tag: string
-  tag_label: string
+
+  owner_id: string | null
+
+  manager_id: string | null
+
+  created_at: string
+
+  price_per_page: number
+
+  price_color: number
+
   is_active: boolean
-  created_at: string
-  updated_at: string
-  image_url: string | null
-}
 
-export interface Kiosk {
-  id: string
-  college_id: string | null
-  name: string
-  location: string
-  status: KioskStatus
+  phone: string | null
+
+  email: string | null
+
+  address: string | null
+
+  telegram_alerts_enabled: boolean
+
+  telegram_chat_id: string | null
+
+  in_charge_name: string | null
+
+  primary_phone: string | null
+
+  secondary_phone: string | null
+
   investment_amount: number
-  recovered_amount: number
-  monthly_earnings: number
-  total_earned: number
-  jobs_this_month: number
-  occupancy_rate: number
-  install_steps: InstallStep[]
-  install_eta: string | null
-  installed_at: string | null
-  is_online: boolean
-  branch_ambassador_id?: string | null
-  installation_date?: string | null
-  installed_by?: string | null
-  printer_serial?: string | null
+
+  type: string
+
+  slots_total: number
+
+  slots_taken: number
+
+  avg_monthly_earnings: number
+
+  tag: string | null
+
+  tag_label: string | null
+
+  image_url: string | null
+
+  owner?: User
+
+  manager?: User
+  
+}
+export interface BranchDailyRevenue {
+  total_jobs?: number
+
+  total_revenue?: number
+  branch_id: string
+
+  branch_name: string | null
+
+  revenue_date: string
+
+  upi_jobs: number
+
+  upi_revenue: number
+
+  wallet_jobs: number
+
+  wallet_amount: number
+
   created_at: string
-  updated_at: string
-  college?: College
-}
 
-export interface InstallStep {
-  label: string
-  done: boolean
-  active?: boolean
+  branch?: Branch
 }
+export interface BranchExpense {
 
-export interface InvestorKiosk {
   id: string
-  investor_id: string
-  kiosk_id: string
-  assigned_at: string
-  status: string
-  kiosk?: Kiosk
-  investor?: Investor
-}
 
-export interface Revenue {
-  id: string
-  kiosk_id: string
-  amount: number
-  print_jobs: number
-  period_start: string
-  period_end: string
-  period_type: string
-  notes: string | null
-  created_by: string | null
-  created_at: string
-  kiosk?: Kiosk
-}
+  branch_id: string
 
-export interface Expense {
-  id: string
-  kiosk_id: string
-  amount: number
+  expense_catalog_id: string | null
+
+  expense_name: string | null
+
   category: string
-  expense_type: ExpenseType
-  period_start: string
-  period_end: string
-  period_type: string
-  notes: string | null
-  expense_name?: string | null
-  expense_catalog_id?: string | null
 
-  // ── Approval workflow ─────────────────────────────────────────
-  /** pending | approved | rejected. Default: 'pending' */
+  expense_type: ExpenseType
+
+  amount: number
+
+  period_start: string
+
+  period_end: string
+
+  period_type: string
+
+  notes: string | null
+
   status: ExpenseStatus
-  /** The investor (branch ambassador or admin) who submitted this expense */
-  submitted_by: string | null
-  /** Admin who approved or rejected */
-  approved_by: string | null
-  approved_at: string | null
-  /** Set when admin rejects */
-  rejected_at: string | null
-  /** Human-readable reason shown to the ambassador */
-  rejection_reason: string | null
-  /** Old field: same as rejection_reason, kept for backward compat */
+
   admin_remarks: string | null
-  /** URL to uploaded bill/receipt image in Supabase Storage */
+
   bill_url: string | null
 
-  // ── Audit ─────────────────────────────────────────────────────
-  /** The investor id who inserted the row (may differ from submitted_by for admin-created rows) */
-  created_by: string | null
+  submitted_by: string | null
+
+  approved_by: string | null
+
+  approved_at: string | null
+
+  rejected_at: string | null
+
+  rejection_reason: string | null
+
   created_at: string
 
-  // ── Relations (joined) ────────────────────────────────────────
-  kiosk?: Kiosk
-  /** Joined from investors table via submitted_by FK */
-  submitted_by_investor?: Pick<Investor, 'id' | 'full_name' | 'email'>
+  branch?: Branch
+
+  submitter?: User
+
+  approver?: User
 }
+export interface ExpenseBreakdown {
+
+  name: string
+
+  color: string
+
+  pct: number
+
+}
+export interface ExpenseCatalogItem {
+
+  id: string
+
+  name: string
+
+  category: string
+
+  default_amount: number
+
+  expense_mode: "fixed" | "custom"
+
+  description: string | null
+
+  is_active: boolean
+
+  created_at: string
+
+}
+// ==============================
+// PAYMENT
+// ==============================
 
 export interface Payment {
   id: string
-  investor_id: string
-  amount: number
-  status: PaymentStatus
+
+  user_id: string
+
+  branch_id: string | null
+
   payment_type: PaymentType
+
+  amount: number
+
+  status: PaymentStatus
+
   razorpay_order_id: string | null
+
   razorpay_payment_id: string | null
-  razorpay_signature: string | null
-  bank_account: string | null
-  period_month: string | null
-  kiosk_breakdown: Record<string, number> | null
-  processed_at: string | null
+
+  bank_account_number: string | null
+
+  ifsc_code: string |null
+
   notes: string | null
+
+  processed_at: string | null
+
   created_at: string
+
   updated_at: string
-  investor?: Investor
+
+  user?: User
+
+  branch?: Branch
 }
+// ==============================
+// WAITLIST
+// ==============================
 
 export interface Waitlist {
-  id: string
-  investor_id: string
-  college_id: string
-  status: WaitlistStatus
-  waitlist_type: 'free' | 'priority'
-  queue_position: number | null
-  razorpay_order_id: string | null
-  razorpay_payment_id: string | null
-  notes: string | null
-  created_at: string
-  updated_at: string
-  college?: College
-  investor?: Investor
-}
 
-export interface KycDocument {
   id: string
-  investor_id: string
-  doc_type: string
-  doc_name: string
-  file_url: string | null
-  status: string
+
+  user_id: string
+
+  branch_id: string
+
+  status: WaitlistStatus
+
+  waitlist_type: "free" | "priority"
+
+  queue_position: number | null
+
+  razorpay_order_id: string | null
+
+  razorpay_payment_id: string | null
+
+  notes: string | null
+
   created_at: string
+
+  updated_at: string
+
+  user?: User
+
+  branch?: Branch
+
 }
+// ==============================
+// PRINTER
+// ==============================
+
+export interface Printer {
+
+  id: string
+
+  branch_id: string
+
+  name: string
+
+  model: string | null
+
+  serial_number: string | null
+
+  status: string
+
+  last_seen: string | null
+
+  created_at: string
+
+  updated_at: string
+
+  branch?: Branch
+
+}
+// ==============================
+// PRINT JOB
+// ==============================
 
 export interface PrintJob {
+
   id: string
-  kiosk_id: string
-  doc_type: string
+
+  printer_id: string
+
+  branch_id: string
+
+  user_id: string | null
+
   pages: number
+
   amount: number
+
   status: string
+
   created_at: string
-  kiosk?: Kiosk
+
+  printer?: Printer
+
+  branch?: Branch
+
+  user?: User
+
 }
+// ==============================
+// KYC DOCUMENT
+// ==============================
+
+export interface KycDocument {
+
+  id: string
+
+  user_id: string
+
+  doc_type: string
+
+  doc_name: string
+
+  file_url: string | null
+
+  status: string
+
+  created_at: string
+
+}
+// =====================================
+// DASHBOARD
+// =====================================
 
 export interface DashboardStats {
   revenue: number
+
   expenses: number
+
   variableExpenses: number
+
   fixedExpenses: number
+
   netProfit: number
+
   investorProfit: number
+
   revenueDelta: number
+
   profitDelta: number
+
   avg3Profit: number
+
   avg3Delta: number
+
   jobs: number
+
   jobsPrev: number
+
   occupancy: number
+
   investment: number
+
   recovered: number
 }
+// =====================================
+// ADMIN KPI
+// =====================================
 
-export interface ExpenseBreakdown {
-  name: string
-  color: string
-  pct: number
+export interface AdminKpis {
+
+  total_branches: number
+
+  available_slots: number
+
+  free_waitlists: number
+
+  priority_waitlists: number
+
+  priority_waitlist_revenue: number
+
 }
+// =====================================
+// BRANCH DASHBOARD
+// =====================================
 
-export interface ExpenseCatalogItem {
+export interface BranchDashboardStats {
+
+  revenue: number
+
+  expenses: number
+
+  jobs: number
+
+  customers: number
+
+  profit: number
+
+}
+// =====================================
+// PERFORMANCE CHART
+// =====================================
+
+export interface PerformanceChartData {
+
+  values: number[]
+
+  labels: string[]
+
+  label: string
+
+}
+// =====================================
+// SIGNUP
+// =====================================
+
+export interface SignupFormData {
+
+  fullName: string
+
+  email: string
+
+  phone: string
+
+  password: string
+
+  confirmPassword: string
+
+}
+// =====================================
+// KYC
+// =====================================
+
+export interface KycFormData {
+
+  panNumber: string
+
+  aadhaarNumber: string
+
+  dob: string
+
+  address: string
+
+  city: string
+
+  state: string
+
+  pincode: string
+
+}
+// =====================================
+// BANK
+// =====================================
+
+export interface BankFormData {
+
+  accountHolderName: string
+
+  bankName: string
+
+  accountNumber: string
+
+  confirmAccountNumber: string
+
+  ifscCode: string
+
+  upiId: string
+
+}
+// =====================================
+// ONBOARDING
+// =====================================
+
+export interface OnboardingFormData {
+
+  fullName: string
+
+  email: string
+
+  phone: string
+
+  kyc: KycFormData
+
+  bank: BankFormData
+
+}
+export interface Withdrawal {
+
   id: string
-  name: string
-  category: string
-  default_amount: number
-  expense_mode: 'fixed' | 'custom'
-  description: string | null
-  is_active: boolean
-  created_at: string
-}
 
+  user_id: string
+
+  amount: number
+
+  status: "pending" | "approved" | "rejected"
+
+  notes: string | null
+
+  created_at: string
+
+  updated_at: string
+
+  user?: User
+
+}

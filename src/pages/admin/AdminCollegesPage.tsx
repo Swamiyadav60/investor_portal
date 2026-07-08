@@ -3,14 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '@/components/layout/Topbar'
 import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/format'
-import type { College } from '@/types/database'
+import type { Branch } from '@/types/database'
 import { useToast } from '@/components/ui/Toast'
 
 interface CollegeForm {
   id?: string
   name: string
   location: string
-  city: string
   type: string
   slots_total: number
   investment_amount: number
@@ -21,7 +20,6 @@ interface CollegeForm {
 const initialFormState: CollegeForm = {
   name: '',
   location: '',
-  city: 'Hyderabad',
   type: 'college',
   slots_total: 3,
   investment_amount: 25000,
@@ -49,7 +47,7 @@ export function AdminCollegesPage() {
     queryKey: ['admin-colleges'],
     queryFn: async () => {
   const { data, error } = await supabase
-    .from('colleges')
+    .from('branches')
     .select('*')
     .order('created_at', { ascending: false })
 
@@ -90,19 +88,25 @@ export function AdminCollegesPage() {
         : updateData
 
         const { error } = await supabase
-        .from('colleges')
+        .from('branches')
         .update(payload)
         .eq('id', id)
 
         if (error) throw error
       } else {
         const payload = {
-          ...collegeData,
+          name: collegeData.name,
+          location: collegeData.location,
+          type: collegeData.type,
+          slots_total: collegeData.slots_total,
+          investment_amount: collegeData.investment_amount,
+          avg_monthly_earnings: collegeData.avg_monthly_earnings,
+          is_active: collegeData.is_active,
           image_url: imageUrl ?? null,
         }
 
         const { error } = await supabase
-        .from('colleges')
+        .from('branches')
         .insert(payload)
 
         if (error) throw error
@@ -124,7 +128,7 @@ export function AdminCollegesPage() {
   const deleteMutation = useMutation({
     mutationFn: async (collegeId: string) => {
   const { error } = await supabase
-    .from('colleges')
+    .from('branches')
     .delete()
     .eq('id', collegeId)
 
@@ -146,8 +150,8 @@ export function AdminCollegesPage() {
     setImageFile(null)
   }
 
-  const openEditModal = (college: College) => {
-    setEditingCollege(college)
+  const openEditModal = (branch: Branch) => {
+    setEditingCollege(branch)
     setShowModal(true)
     setImageFile(null)
   }
@@ -223,10 +227,6 @@ export function AdminCollegesPage() {
                 <div className="admin-form-group">
                   <label className="admin-form-label">Name</label>
                   <input className="admin-form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div className="admin-form-group">
-                  <label className="admin-form-label">City</label>
-                  <input className="admin-form-input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                 </div>
               </div>
               <div className="admin-form-group" style={{ marginBottom: '.75rem' }}>

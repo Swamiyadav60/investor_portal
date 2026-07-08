@@ -50,7 +50,7 @@ export default function App() {
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
             <Route path="/signup" element={<GuestRoute><SignupPage /></GuestRoute>} />
 
-            <Route element={<ProtectedRoute allowedRoles={['investor']}><InvestorLayout /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute allowedRoles={['branch_owner']}><InvestorLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/kiosks" element={<KiosksPage />} />
               <Route path="/payouts" element={<PayoutsPage />} />
@@ -59,7 +59,7 @@ export default function App() {
               <Route path="/waitlist" element={<WaitlistPage />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['branch_ambassador']}><BranchAmbassadorLayout /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute allowedRoles={['branch']}><BranchAmbassadorLayout /></ProtectedRoute>}>
               <Route path="/branch/dashboard" element={<BranchDashboardPage />} />
               <Route path="/branch/printers" element={<BranchPrintersPage />} />
               <Route path="/branch/log-expense" element={<BranchLogExpensePage />} />
