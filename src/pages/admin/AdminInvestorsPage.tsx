@@ -37,6 +37,7 @@ export function AdminInvestorsPage() {
   .order('created_at', { ascending: false })
       
       if (error) throw error
+      
       return (data ?? []) as User[]
     },
   })
@@ -61,11 +62,24 @@ export function AdminInvestorsPage() {
   const createAmbassadorMutation = useMutation({
     mutationFn: async () => {
       // Call supabase RPC
-     const { data, error } = await supabase.rpc('create_branch_account', {
-  p_email: newAmbassador.email,
-  p_password: newAmbassador.password,
-  p_full_name: newAmbassador.fullName
-})
+    const { data, error } = await supabase.functions.invoke(
+  "create-branch-account",
+  {
+    body: {
+      fullName: newAmbassador.fullName,
+      email: newAmbassador.email,
+      password: newAmbassador.password,
+    },
+  }
+);
+
+console.log("DATA:", data);
+console.log("ERROR:", error);
+
+if (error) {
+  console.log(await error.context?.json?.());
+  throw error;
+}
 
       if (error) throw error
       return data
@@ -81,18 +95,19 @@ export function AdminInvestorsPage() {
     }
   })
 
-  const filteredInvestors = investors.filter((i) => {
-  const search = searchTerm.toLowerCase()
+  const filteredInvestors = investors.filter((i: any) => {
+  const search = searchTerm.toLowerCase();
 
   const matchesSearch =
     (i.full_name ?? "").toLowerCase().includes(search) ||
     (i.email ?? "").toLowerCase().includes(search) ||
-    (i.phone ?? "").toLowerCase().includes(search)
+    (i.phone ?? "").toLowerCase().includes(search);
 
-  const matchesRole = i.role === activeTab
+  const matchesRole =
+    i.user_role?.some((r: any) => r.role === activeTab);
 
-  return matchesSearch && matchesRole
-})
+  return matchesSearch && matchesRole;
+});
 
   return (
     <>
@@ -102,7 +117,7 @@ export function AdminInvestorsPage() {
           <div>
             <div className="section-heading">Manage Accounts</div>
             <div className="section-heading-sub">
-              {investors.filter(i => i.role === 'branch_owner').length} Investors · {investors.filter(i => i.role === 'branch').length} Branch Ambassadors
+              {  investors.filter((i: any) => i.user_role?.some((r: any) => r.role === "branch_owner")).length}Investors ·{investors.filter((i: any) =>i.user_role?.some((r: any) => r.role === "branch")  ).length}Branch Ambassadors
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
