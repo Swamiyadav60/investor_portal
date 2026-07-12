@@ -74,7 +74,7 @@ return data
 
   const addKioskMutation = useMutation({
     mutationFn: async () => {
-      const { data: kiosk, error: kioskError } = await supabase
+      const { error: kioskError } = await supabase
         .from('branches')
         .insert({
             name: newKioskName.trim(),

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
 import { maskPan, maskAadhaar, maskBankAccount } from '@/lib/format'
 

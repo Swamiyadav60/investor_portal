@@ -47,7 +47,7 @@ export function DashboardPage() {
       />
       <div className="page-view content">
         {/* KPI Cards */}
-        <KPICards stats={stats} period={period} profitShare={investor?.profit_share} />
+        <KPICards stats={stats} period={period} profitShare={investor?.profit_share ?? undefined} />
 
         {/* Expense + ROI row */}
         <div className="dash-middle-row">
