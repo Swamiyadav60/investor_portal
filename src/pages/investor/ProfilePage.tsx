@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import { maskPan, maskAadhaar, maskBankAccount } from '@/lib/format'
 
 
+
 export function ProfilePage() {
   const { investor, refreshInvestor } = useAuth()
   const { toast } = useToast()
@@ -61,7 +62,7 @@ export function ProfilePage() {
         {
           user_id: investor.id,
           city: form.city,
-          
+
         },
         {
           onConflict: 'user_id',
@@ -84,7 +85,7 @@ export function ProfilePage() {
     <>
       <Topbar title="Profile" />
       <div className="page-view content">
-        
+
         <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text)' }}>
           To update PAN, Aadhaar, Mobile Number, or Bank Details, please contact VPrint Support.
         </div>
@@ -96,28 +97,27 @@ export function ProfilePage() {
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Verified Personal Information</div>
               <span
-                    className={`kyc-badge ${
-                    investor?.kyc_status === 'verified'
-                    ? 'verified'
-                    : investor?.kyc_status === 'rejected'
+                className={`kyc-badge ${investor?.kyc_status === 'verified'
+                  ? 'verified'
+                  : investor?.kyc_status === 'rejected'
                     ? 'rejected'
                     : 'pending'
                   }`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
 
-               {investor?.kyc_status === 'verified'
-                ? 'Verified Information'
-                : investor?.kyc_status === 'rejected'
-                ? 'KYC Rejected'
-                : 'KYC Pending'}
+                {investor?.kyc_status === 'verified'
+                  ? 'Verified Information'
+                  : investor?.kyc_status === 'rejected'
+                    ? 'KYC Rejected'
+                    : 'KYC Pending'}
               </span>
             </div>
-            
+
             <div className="prof-avatar-row">
               <div className="prof-avatar">{investor?.avatar_initials || 'VP'}</div>
               <div>
@@ -151,26 +151,25 @@ export function ProfilePage() {
           <div className="rpt-card">
             <div className="rpt-card-header" style={{ marginBottom: '1.25rem' }}>
               <div className="rpt-card-title">Verified Bank Information</div>
-              <span className={`kyc-badge ${
-                investor?.kyc_status === 'verified'
+              <span className={`kyc-badge ${investor?.kyc_status === 'verified'
                 ? 'verified'
                 : investor?.kyc_status === 'rejected'
-                ? 'rejected'
-                : 'pending'
-              }`}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
+                  ? 'rejected'
+                  : 'pending'
+                }`}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
 
-              {investor?.kyc_status === 'verified'
-              ? 'Verified Information'
-              : investor?.kyc_status === 'rejected'
-              ? 'KYC Rejected'
-              : 'KYC Pending'}
-            </span>
+                {investor?.kyc_status === 'verified'
+                  ? 'Verified Information'
+                  : investor?.kyc_status === 'rejected'
+                    ? 'KYC Rejected'
+                    : 'KYC Pending'}
+              </span>
             </div>
 
             <div className="bank-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '4px', marginBottom: '0.75rem' }}>
@@ -200,8 +199,8 @@ export function ProfilePage() {
               <div className="rpt-card-title">Contact & Preferences</div>
               <button className="rpt-export-btn" onClick={() => setEditing(!editing)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
                 {editing ? 'Cancel' : 'Edit'}
               </button>
@@ -262,7 +261,7 @@ export function ProfilePage() {
                 <span className="prof-field-val">{investor?.upi_id || 'Not provided'}</span>
               )}
             </div>
-            
+
             {editing && (
               <button className="prof-save-btn" onClick={handleSave} style={{ marginTop: '1rem' }}>
                 Save changes
@@ -299,7 +298,7 @@ export function ProfilePage() {
             <div style={{ color: 'var(--gray)', fontSize: '14px', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               To initiate a slot transfer, please contact our support team. We'll verify your request and guide you through the process.
             </div>
-            
+
             <div style={{ padding: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ fontSize: '24px' }}>📞</div>
               <div>
@@ -310,15 +309,15 @@ export function ProfilePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <a 
-                href="tel:+918143632036" 
-                className="public-nav-btn-primary" 
+              <a
+                href="tel:+918143632036"
+                className="public-nav-btn-primary"
                 style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%', boxSizing: 'border-box' }}
               >
                 Call Now
               </a>
-              <button 
-                className="admin-btn admin-btn-secondary" 
+              <button
+                className="admin-btn admin-btn-secondary"
                 onClick={() => setShowTransferModal(false)}
                 style={{ width: '100%' }}
               >
@@ -339,7 +338,7 @@ export function ProfilePage() {
             <div style={{ color: 'var(--gray)', fontSize: '14px', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               Closing your account is a permanent action and requires manual verification by our team. Please contact us directly to proceed.
             </div>
-            
+
             <div style={{ padding: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ fontSize: '24px' }}>📞</div>
               <div>
@@ -350,15 +349,15 @@ export function ProfilePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <a 
-                href="tel:+918143632036" 
-                className="public-nav-btn-primary" 
+              <a
+                href="tel:+918143632036"
+                className="public-nav-btn-primary"
                 style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%', boxSizing: 'border-box' }}
               >
                 Call Now
               </a>
-              <button 
-                className="admin-btn admin-btn-secondary" 
+              <button
+                className="admin-btn admin-btn-secondary"
                 onClick={() => setShowCloseAccountModal(false)}
                 style={{ width: '100%' }}
               >
