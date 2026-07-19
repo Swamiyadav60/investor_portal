@@ -67,8 +67,7 @@ export function AdminRevenuePage() {
     const branch = kiosks.find((b: any) => b.id === r.branch_id)
 
     const revenueVal =
-      Number(r.upi_revenue || 0) +
-      Number(r.wallet_amount || 0)
+      Number(r.upi_revenue || 0) 
 
     const matchedExpenses = expenses.filter(
       (e: any) =>

@@ -17,7 +17,7 @@ export function AdminAnalyticsPage() {
     queryKey: ['admin-all-revenues'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('revenues')
+        .from('branch_daily_revenue')
         .select('*')
         .order('revenue_date', { ascending: true })
       if (error) throw error
@@ -30,13 +30,36 @@ export function AdminAnalyticsPage() {
     queryKey: ['admin-all-expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('expenses')
+        .from('branch_expenses')
         .select('*')
         .eq('status', 'approved')
       if (error) throw error
       return data || []
     },
   })
+  const { data: branches = [] } = useQuery({
+  queryKey: ['admin-branches'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('branches')
+      .select(`
+        id,
+        owner_id,
+        users!branches_owner_id_fkey(
+          profit_share
+        )
+      `)
+
+    if (error) throw error
+    return data || []
+  },
+})
+const profitShareMap = new Map(
+  branches.map((b: any) => [
+    b.id,
+    Number(b.users?.profit_share ?? 0)
+  ])
+)
 
   // ── Admin KPIs via RPC ────────────────────────────────────────
   const { data: adminKpis, isLoading: loadingKpis } = useQuery({
@@ -89,20 +112,78 @@ return data as AdminKpis
   })
 
   // ── Platform totals ───────────────────────────────────────────
-  const totalRevenue = revenues.reduce((s: number, r: any) => s + Number(r.upi_revenue ?? 0)+Number(r.wallet_amount ?? 0), 0)
+  const totalRevenue = revenues.reduce((s: number, r: any) => s + Number(r.upi_revenue ?? 0), 0)
   const totalExp     = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0)
-  const totalProfit  = totalRevenue - totalExp
+  const totalProfit = revenues.reduce((sum: number, r: any) => {
+  const revenue =
+    Number(r.upi_revenue ?? 0) +
+    Number(r.wallet_amount ?? 0)
+
+  const expense = expenses
+    .filter((e: any) => e.branch_id === r.branch_id)
+    .reduce((s: number, e: any) => s + Number(e.amount), 0)
+
+  const branchProfit = revenue - expense
+
+  const sharePercent = profitShareMap.get(r.branch_id) ?? 0
+
+  const ownerShare = branchProfit * sharePercent / 100
+
+  return sum + (branchProfit - ownerShare)
+}, 0)
   const totalJobs    = revenues.reduce((s: number, r: any) => s + Number(r.upi_jobs ?? 0)+Number(r.wallet_jobs ?? 0), 0)
 
   // ── Chart data ────────────────────────────────────────────────
-  const chartLabels = MONTHS_SHORT
-  const chartValues = chartLabels.map((_, idx) => {
-    const monthRevs = revenues.filter((r: any) => new Date(r.revenue_date).getMonth() === idx)
-    const monthExps = expenses.filter((e: any) => new Date(e.expense_date).getMonth() === idx)
-    const rev = monthRevs.reduce((s: number, r: any) => s + Number(r.upi_revenue ?? 0)+Number(r.wallet_amount ?? 0), 0)
-    const exp = monthExps.reduce((s: number, e: any) => s + Number(e.amount), 0)
+  const chartLabels =
+  graphInterval === 'monthly'
+    ? MONTHS_SHORT
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const chartValues = chartLabels.map((_, idx) => {
+  if (graphInterval === 'monthly') {
+    const monthRevs = revenues.filter(
+      (r: any) => new Date(r.revenue_date).getMonth() === idx
+    )
+
+    const monthExps = expenses.filter(
+      (e: any) => new Date(e.period_start).getMonth() === idx
+    )
+
+    const rev = monthRevs.reduce(
+      (s: number, r: any) =>
+        s + Number(r.upi_revenue ?? 0),
+      0
+    )
+
+    const exp = monthExps.reduce(
+      (s: number, e: any) => s + Number(e.amount),
+      0
+    )
+
     return graphMetric === 'revenue' ? rev : rev - exp
-  })
+  }
+
+  const weekRevs = revenues.filter(
+    (r: any) => new Date(r.revenue_date).getDay() === idx
+  )
+
+  const weekExps = expenses.filter(
+    (e: any) => new Date(e.period_start).getDay() === idx
+  )
+
+  const rev = weekRevs.reduce(
+    (s: number, r: any) =>
+      s + Number(r.upi_revenue ?? 0),
+    0
+  )
+
+  const exp = weekExps.reduce(
+    (s: number, e: any) => s + Number(e.amount),
+    0
+  )
+
+  return graphMetric === 'revenue' ? rev : rev - exp
+})
 
   return (
     <>

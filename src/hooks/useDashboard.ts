@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { DashboardStats } from '@/types/database'
 
-const PROFIT_SHARE = 70 // Fixed platform-wide profit share (no per-investor column in new schema)
 
 export function useDashboardData(
   investorId: string | undefined,
@@ -104,6 +103,15 @@ async function fetchLiveStats(
 
   const branchIds = ownedBranches?.map(b => b.id) || []
   if (!branchIds.length) return EMPTY_STATS
+  const { data: investor, error: investorError } = await supabase
+  .from('users')
+  .select('profit_share')
+  .eq('id', investorId)
+  .single()
+
+if (investorError) throw investorError
+
+
 
   const branchFilter = branchId !== 'all' ? branchId : undefined
   const { currStart, currEnd, prevStart, prevEnd } = getPeriodBounds(period)
@@ -196,7 +204,7 @@ async function fetchLiveStats(
   const variableExpenses = currExpenses?.filter(e => e.expense_type === 'variable').reduce((s, e) => s + Number(e.amount), 0) || 0
   const fixedExpenses = currExpenses?.filter(e => e.expense_type === 'fixed').reduce((s, e) => s + Number(e.amount), 0) || 0
   const netProfit = revenue - variableExpenses - fixedExpenses
-  const profitShare = PROFIT_SHARE
+  const profitShare = Number(investor?.profit_share ?? 100)
   const investorProfit = netProfit * (profitShare / 100)
 
   // 6. Previous period totals

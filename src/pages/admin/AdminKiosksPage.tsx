@@ -38,30 +38,40 @@ export function AdminKiosksPage() {
 
   // 2. Fetch users for assignment dropdown
   const { data: users = [] } = useQuery({
-    queryKey: ['admin-users-simple'],
-    queryFn: async () => {
-  const { data: users, error: usersError } = await supabase
-    .from("users")
-    .select("id, full_name, email")
-    .order("full_name")
+  queryKey: ['admin-users-for-kiosk-assignment'],
+  queryFn: async () => {
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, full_name, email")
+      .order("full_name");
 
-  if (usersError) throw usersError
+    if (usersError) throw usersError;
 
-  const { data: roles, error: rolesError } = await supabase
-    .from("user_roles")
-    .select("user_id, role")
+    const { data: roles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id, role");
 
-  if (rolesError) throw rolesError
+    if (rolesError) throw rolesError;
 
-  const data = users.map((u) => ({
+   const data = users.map((u) => {
+  const userRoles = roles.filter(
+    (r) => String(r.user_id) === String(u.id)
+  );
+
+  return {
     ...u,
-    role: roles.find((r) => r.user_id === u.id)?.role ?? null,
-  }))
-
+    role: userRoles.some((r) => r.role === "branch_owner")
+      ? "branch_owner"
+      : userRoles.some((r) => r.role === "branch")
+      ? "branch"
+      : userRoles.some((r) => r.role === "admin")
+      ? "admin"
+      : null,
+  };
+});
 return data
-
-}
-  })
+  },
+});
 
   const { data: colleges = [] } = useQuery({
     queryKey: ['admin-colleges-simple'],
@@ -234,9 +244,8 @@ return data
   }
 
   const filteredUsers = users.filter(
-  u => u.role === assignType
-)
-
+    (u) => u.role === assignType
+  );
   return (
     <>
       <Topbar title="Kiosks" />

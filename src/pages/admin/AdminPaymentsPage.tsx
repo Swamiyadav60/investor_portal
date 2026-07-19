@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 // used to be a single `payments` table into two.
 interface UnifiedPayment {
   id: string
-  _source: 'withdrawal' | 'transaction'
+  _source: 'withdrawal' | 'payment' // to distinguish which table the row came from
   user: { full_name: string; email: string } | null
   payment_type: string
   amount: number
@@ -31,17 +31,16 @@ export function AdminPaymentsPage() {
   } = useQuery<UnifiedPayment[]>({
     queryKey: ['admin-payments'],
     queryFn: async () => {
-      const [{ data: withdrawals, error: wErr }, { data: transactions, error: tErr }] = await Promise.all([
-        supabase.from('withdrawals').select('*').order('created_at', { ascending: false }),
-        supabase.from('transactions').select('*').order('created_at', { ascending: false }),
-      ])
+      const [{ data: withdrawals, error: wErr }, { data: payments, error: pErr }] = await Promise.all([
+  supabase.from('withdrawals').select('*').order('created_at', { ascending: false }),
+  supabase.from('payments').select('*').order('created_at', { ascending: false }),
+])
 
-      if (wErr) throw wErr
-      if (tErr) throw tErr
-
+if (wErr) throw wErr
+if (pErr) throw pErr
       const userIds = Array.from(new Set([
         ...(withdrawals || []).map(w => w.user_id),
-        ...(transactions || []).map(t => t.user_id),
+        ...(payments || []).map(p => p.user_id),
       ].filter(Boolean)))
 
       const { data: users } = userIds.length
@@ -63,20 +62,23 @@ export function AdminPaymentsPage() {
         created_at: w.created_at,
       }))
 
-      const transactionRows: UnifiedPayment[] = (transactions || []).map(t => ({
-        id: t.id,
-        _source: 'transaction',
-        user: userMap.get(t.user_id) || null,
-        payment_type: t.type || 'investment',
-        amount: Number(t.amount),
-        status: t.status || 'pending',
-        account: null,
-        razorpay_payment_id: null,
-        notes: null,
-        created_at: t.created_at,
-      }))
+      const paymentRows: UnifiedPayment[] = (payments || []).map((p) => ({
+  id: p.id,
+  _source: 'payment',
+  user: userMap.get(p.user_id) || null,
 
-      return [...withdrawalRows, ...transactionRows].sort(
+  payment_type: p.payment_type,
+  amount: Number(p.amount),
+  status: p.status,
+
+  account: p.bank_account_number,
+  razorpay_payment_id: p.razorpay_payment_id,
+  notes: p.notes,
+
+  created_at: p.created_at,
+}))
+
+      return [...withdrawalRows, ...paymentRows].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
     },
@@ -94,7 +96,7 @@ export function AdminPaymentsPage() {
         if (error) throw error
       } else {
         const { error } = await supabase
-          .from('transactions')
+          .from('payments')
           .update({ status })
           .eq('id', row.id)
         if (error) throw error
@@ -125,7 +127,7 @@ export function AdminPaymentsPage() {
     <>
       <Topbar title="Payments" />
       <div className="page-view content">
-        Error loading transactions.
+        Error loading payments.
       </div>
     </>
   )
@@ -139,14 +141,14 @@ export function AdminPaymentsPage() {
           <div className="rpt-kpi"><div className="rpt-kpi-val" style={{ color: 'var(--amber)' }}>{fmt(pendingPayouts.reduce((sum, p) => sum + p.amount, 0))}</div><div className="rpt-kpi-lbl">Pending payouts</div></div>
           <div className="rpt-kpi"><div className="rpt-kpi-val">{fmt(totalPaidOut)}</div><div className="rpt-kpi-lbl">Total paid out</div></div>
           <div className="rpt-kpi"><div className="rpt-kpi-val">{fmt(totalInvestments)}</div><div className="rpt-kpi-lbl">Total investments</div></div>
-          <div className="rpt-kpi"><div className="rpt-kpi-val">{payments.length}</div><div className="rpt-kpi-lbl">Total transactions</div></div>
+          <div className="rpt-kpi"><div className="rpt-kpi-val">{payments.length}</div><div className="rpt-kpi-lbl">Total payments</div></div>
         </div>
 
         <div className="rpt-card">
           <div className="rpt-card-header">
             <div>
               <div className="rpt-card-title">Transactions & Payouts</div>
-              <div className="rpt-card-sub">Review and manage all financial transactions</div>
+              <div className="rpt-card-sub">Review and manage all financial payments</div>
             </div>
           </div>
           <div className="rpt-table-wrap">
@@ -164,9 +166,9 @@ export function AdminPaymentsPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>Loading transactions...</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>Loading payments...</td></tr>
                 ) : payments.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>No transactions found.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>No payments found.</td></tr>
                 ) : (
                   payments.map((p) => (
                     <tr key={`${p._source}-${p.id}`}>
