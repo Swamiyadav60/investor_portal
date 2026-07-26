@@ -36,14 +36,28 @@ export function AdminRevenuePage() {
         .order("revenue_date", { ascending: false })
 
       if (error) throw error
-      return revenues || []
-
-      
-      
-      
+      return revenues || []  
     },
   })
-  
+
+  const { data: userRoles = [] } = useQuery({
+  queryKey: ["admin-user-roles"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select(`
+        user_id,
+        users (
+          full_name,
+          profit_share
+        )
+      `)
+
+    if (error) throw error
+
+    return data ?? []
+  },
+})
 
   // ── Fetch Approved Expenses ────────────────────────────────────────────────
   const { data: expenses = [], isLoading: loadingExpenses } = useQuery({
@@ -58,50 +72,111 @@ export function AdminRevenuePage() {
       return data || []
     },
   })
+  const branchMap = useMemo(() => {
+  return new Map(
+    kiosks.map((b: any) => [b.id, b])
+  )
+}, [kiosks])
 
-  const isLoading = loadingRevenues || loadingExpenses || loadingKiosks
+const userMap = useMemo(() => {
+  return new Map(
+    userRoles.map((u: any) => [
+      u.user_id,
+      {
+        full_name: u.users?.full_name,
+        profit_share: u.users?.profit_share,
+      },
+    ])
+  )
+}, [userRoles])
+
+  const isLoading =
+  loadingRevenues ||
+  loadingExpenses ||
+  loadingKiosks 
 
   // ── Compute Raw Metrics Per Revenue Row (Pre-filtering) ────────────────────
   const computedAllRows = useMemo(() => {
   return revenues.map((r: any) => {
-    const branch = kiosks.find((b: any) => b.id === r.branch_id)
 
+    const branch = branchMap.get(r.branch_id)
+
+    const owner =
+      branch?.owner_id
+        ? userMap.get(branch.owner_id)
+        : null
+    console.log("Branch Owner ID:", branch?.owner_id)
+console.log("User Map Size:", userMap.size)
+console.log("Owner Found:", owner)
     const revenueVal =
-      Number(r.upi_revenue || 0) 
+      Number(r.upi_revenue || 0)
 
-    const matchedExpenses = expenses.filter(
-      (e: any) =>
-        e.branch_id === r.branch_id &&
-        e.period_start === r.revenue_date
-    )
+    const matchedExpenses =
+      expenses.filter(
+        (e: any) =>
+          e.branch_id === r.branch_id &&
+          e.period_start === r.revenue_date
+      )
 
-    const approvedExpensesVal = matchedExpenses.reduce(
-      (sum: number, e: any) => sum + Number(e.amount),
-      0
-    )
+    const approvedExpensesVal =
+      matchedExpenses.reduce(
+        (sum: number, e: any) =>
+          sum + Number(e.amount),
+        0
+      )
 
-    const netProfitVal = revenueVal - approvedExpensesVal
+    const netProfitVal =
+      revenueVal - approvedExpensesVal
+
+    const investorPercentage =
+      Number(owner?.profit_share || 0)
+
+    const investorShareVal =
+      (netProfitVal * investorPercentage) / 100
+
+    const platformShareVal =
+      netProfitVal - investorShareVal
 
     return {
+
       ...r,
 
-      investorName: "Branch Owner",
-      collegeName: branch?.name ?? "-",
-      printerCode: r.branch_name ?? branch?.name ?? "-",
+      investorName:
+        owner?.full_name ?? "Unknown",
+
+      collegeName:
+        branch?.name ?? "-",
+
+      printerCode:
+        r.branch_name ?? branch?.name ?? "-",
 
       revenueVal,
+
       approvedExpensesVal,
+
       netProfitVal,
 
-      investorShareVal: 0,
-      platformShareVal: netProfitVal,
+      investorShareVal,
 
-      kioskStatus: branch?.is_active ? "active" : "inactive",
+      platformShareVal,
 
-      lastUpdated: r.created_at,
+      kioskStatus:
+        branch?.is_active
+          ? "active"
+          : "inactive",
+
+      lastUpdated:
+        r.created_at,
     }
+
   })
-}, [revenues, expenses, kiosks])
+
+}, [
+  revenues,
+  expenses,
+  branchMap,
+  userMap
+])
 
   // ── Filter & Sort Logic ────────────────────────────────────────────────────
   const filteredRows = useMemo(() => {
@@ -152,6 +227,32 @@ export function AdminRevenuePage() {
 
     return result
   }, [computedAllRows, searchInvestor, searchPrinterCode, searchCollege, dateFrom, dateTo, revenueStatus, sortBy])
+  const collegeSummary = useMemo(() => {
+  const summary: Record<string, any> = {};
+
+  filteredRows.forEach((row: any) => {
+    const college = row.collegeName || "Unknown";
+
+    if (!summary[college]) {
+      summary[college] = {
+        college,
+        revenue: 0,
+        expenses: 0,
+        netProfit: 0,
+        investorShare: 0,
+        platformShare: 0,
+      };
+    }
+
+    summary[college].revenue += row.revenueVal;
+    summary[college].expenses += row.approvedExpensesVal;
+    summary[college].netProfit += row.netProfitVal;
+    summary[college].investorShare += row.investorShareVal;
+    summary[college].platformShare += row.platformShareVal;
+  });
+
+  return Object.values(summary);
+}, [filteredRows]);
 
   // ── KPI Calculations ───────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -236,7 +337,7 @@ export function AdminRevenuePage() {
             <div className="rpt-kpi-lbl">Revenue This Month</div>
           </div>
         </div>
-
+        
         {/* Filters Card */}
         <div className="rpt-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
           <div style={{
@@ -348,7 +449,47 @@ export function AdminRevenuePage() {
             </div>
           )}
         </div>
+        <div className="rpt-card" style={{ marginBottom: "20px" }}>
+  <div className="rpt-card-header">
+    <div>
+      <div className="rpt-card-title">
+        College-wise Summary
+      </div>
 
+      <div className="rpt-card-sub">
+        {dateFrom || "Beginning"} → {dateTo || "Today"}
+      </div>
+    </div>
+  </div>
+
+  <div className="rpt-table-wrap">
+    <table className="admin-table">
+      <thead>
+        <tr>
+          <th>College</th>
+          <th>Revenue</th>
+          <th>Expenses</th>
+          <th>Net Profit</th>
+          <th>Investor Share</th>
+          <th>Platform Share</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {collegeSummary.map((row: any) => (
+          <tr key={row.college}>
+            <td>{row.college}</td>
+            <td>{fmt(row.revenue)}</td>
+            <td>{fmt(row.expenses)}</td>
+            <td>{fmt(row.netProfit)}</td>
+            <td>{fmt(row.investorShare)}</td>
+            <td>{fmt(row.platformShare)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
         {/* Platform Revenue Analytics Table */}
         <div className="rpt-card">
           <div className="rpt-card-header">
